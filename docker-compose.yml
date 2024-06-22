@@ -29,8 +29,9 @@ services:
     environment:
       - MY_LOG_LEVEL=info
       - MY_LOG_STYLE=Always
-    command: 'bash -c "./wait-for-it.sh db:5432 -q -- diesel setup && cargo watch -x run"'
+      - DATABASE_URL=postgres://localhost:3400
+    command: 'bash -c "/wait-for-it.sh db:5432 -q -- diesel setup && cargo watch -x run"'
 
-  volumes:
-    postgres:
-      driver: local
+volumes:
+  postgres:
+    driver: local
