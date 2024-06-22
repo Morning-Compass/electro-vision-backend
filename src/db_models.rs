@@ -3,10 +3,17 @@
 #![allow(unused)]
 #![allow(clippy::all)]
 
+use chrono::{DateTime, Utc};
 use diesel::Queryable;
 use serde::Serialize;
 
 #[derive(Queryable, Debug, Serialize)]
 pub struct User {
     pub id: i32,
+    pub username: String,
+    pub email: String,
+    pub password: String,
+    #[serde_as(as "TimestampSeconds")]
+    pub created_at: DateTime<Utc>,
+    pub account_valid: bool,
 }
