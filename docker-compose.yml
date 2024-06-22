@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:latest
+    restart: always
+    container_name: morning-compass-db
+    environment:
+      POSTGRES_USERNAME: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: morning-compass
+    ports:
+      - "3400:5432"
+    volumes:
+      - postgres:/var/lib/postgresql/data
+  # frontend:
+  #   build: .
+  #   container_name: morning-compass-frontend
+  #   volumes:
+  #     - .:/app
+  #   working_dir: /app
+  #   command: cargo tauri dev
+  cloud_server:
+    build:
+      context: .
+      dockerfile: ../morning-compass-rust/Dockerfile
+    volumes:
+      - "./:/usr/src/morning-compass-rust"
+    links:
+      - db
+    environment:
+      - MY_LOG_LEVEL=info
+      - MY_LOG_STYLE=Always
+    command: 'bash -c "./wait-for-it.sh db:5432 -q -- diesel setup && cargo watch -x run"'
+
+  volumes:
+    postgres:
+      driver: local
