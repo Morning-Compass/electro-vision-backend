@@ -10,13 +10,13 @@ RUN cargo install cargo-watch
 
 RUN USER=root cargo new --bin app
 
-# Download wait-for-it.sh and set execute permissions
 RUN curl -o /wait-for-it.sh https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh
 RUN chmod +x /wait-for-it.sh
 
 WORKDIR /app
 
 COPY ./Cargo.toml Cargo.toml
+COPY . .
 # COPY ./Cargo.lock Cargo.lock
 
-RUN cargo build --release --color never && rm src/*.rs
+RUN cargo build --release --color never
