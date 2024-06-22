@@ -21,7 +21,7 @@ services:
   cloud_server:
     build:
       context: .
-      dockerfile: ../morning-compass-rust/Dockerfile
+      dockerfile: Dockerfile
     volumes:
       - "./:/usr/src/morning-compass-rust"
     links:
