@@ -4,10 +4,14 @@
 #![allow(clippy::all)]
 
 use chrono::{DateTime, Utc};
-use diesel::Queryable;
 use serde::Serialize;
+use diesel::prelude::*;
+use serde_derive::Serialize;
+use serde_with::{serde_as, TimestampSeconds};
 
 #[derive(Queryable, Debug, Serialize)]
+#[diesel(table_name = create::schema::user)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct User {
     pub id: i32,
     pub username: String,

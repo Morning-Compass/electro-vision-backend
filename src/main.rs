@@ -1,4 +1,4 @@
-mod db_models;
+mod models;
 mod db_utils;
 mod schema;
 
