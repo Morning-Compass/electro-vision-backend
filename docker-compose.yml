@@ -4,20 +4,14 @@ services:
     restart: always
     container_name: morning-compass-db
     environment:
-      POSTGRES_USERNAME: postgres
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
       POSTGRES_DB: morning-compass
     ports:
       - "3400:5432"
     volumes:
       - postgres:/var/lib/postgresql/data
-  # frontend:
-  #   build: .
-  #   container_name: morning-compass-frontend
-  #   volumes:
-  #     - .:/app
-  #   working_dir: /app
-  #   command: cargo tauri dev
+
   cloud_server:
     build:
       context: .
@@ -26,10 +20,14 @@ services:
       - "./:/usr/src/morning-compass-rust"
     links:
       - db
+    ports:
+      - "3500:3500"
+    expose:
+      - 3500
     environment:
       - MY_LOG_LEVEL=info
       - MY_LOG_STYLE=Always
-      - DATABASE_URL=postgres://localhost:3400
+      - DATABASE_URL=postgresql://postgres:password@db:5432/morning-compass
     command: 'bash -c "/wait-for-it.sh db:5432 -q -- diesel setup && cargo watch -x run"'
 
 volumes:
