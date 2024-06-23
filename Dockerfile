@@ -19,4 +19,3 @@ COPY ./Cargo.toml Cargo.toml
 COPY . .
 # COPY ./Cargo.lock Cargo.lock
 
-RUN cargo build --release --color never
