@@ -16,8 +16,7 @@ impl Actor for DbActor {
 
 pub fn get_pool(db_url: &str) -> Pool<ConnectionManager<PgConnection>> {
     let manager: ConnectionManager<PgConnection> = ConnectionManager::<PgConnection>::new(db_url);
-    match Pool::builder().build(manager) {
-        Ok(pool) => pool,
-        Err(err) => panic!("Error building conneciton pool {:?}", err),
-    }
+    Pool::builder()
+        .build(manager)
+        .expect("Error building connection pool")
 }
