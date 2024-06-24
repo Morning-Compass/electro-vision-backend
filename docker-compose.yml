@@ -13,6 +13,8 @@ services:
       - "5432"
     volumes:
       - postgres:/var/lib/postgresql/data
+    networks:
+      - morning-compass-network
 
   cloud_server:
     build:
@@ -25,14 +27,20 @@ services:
     ports:
       - "3500:3500"
     expose:
-      - 3500
+      - "3500"
     environment:
       - MY_LOG_LEVEL=info
       - MY_LOG_STYLE=Always
       - DATABASE_URL=postgresql://postgres:password@db:5432/morning-compass
-    #command: 'bash -c "/wait-for-it.sh db:5432 -q -- && rm -rf migrations/* && diesel setup && diesel migration generate user && diesel migration run && cargo run"'
     command: 'bash -c "/wait-for-it.sh db:5432 -q -- && cargo run"'
+    depends_on:
+      - db
+    networks:
+      - morning-compass-network
 
 volumes:
   postgres:
     driver: local
+
+networks:
+  morning-compass-network:
