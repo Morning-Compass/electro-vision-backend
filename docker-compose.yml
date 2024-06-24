@@ -9,6 +9,8 @@ services:
       POSTGRES_DB: morning-compass
     ports:
       - "3400:5432"
+    expose:
+      - "5432"
     volumes:
       - postgres:/var/lib/postgresql/data
 
@@ -28,8 +30,13 @@ services:
       - MY_LOG_LEVEL=info
       - MY_LOG_STYLE=Always
       - DATABASE_URL=postgresql://postgres:password@db:5432/morning-compass
-    command: 'bash -c "/wait-for-it.sh db:5432 -q -- && rm -rf migrations/* && diesel setup && diesel migration generate user && diesel migration run && cargo run"'
-    #command: 'bash -c "/wait-for-it.sh db:5432 -q -- && cargo run"'
+    #command: 'bash -c "/wait-for-it.sh db:5432 -q -- && rm -rf migrations/* && diesel setup && diesel migration generate user && diesel migration run && cargo run"'
+    command: 'bash -c "/wait-for-it.sh db:5432 -q -- && diesel setup && diesel migration generate users && diesel migration generate confirmation_tokens && diesel migration generate roles && diesel migration generate user_roles && cargo run"'
+    #command: 'echo /app/migrations/2024-06-24-08033_users/up.sql > "CREATE TABLE users (id Integer NOT NULL, username VARCHAR NOT NULL, email VARCHAR NOT NULL PRIMARY KEY, password VARCHAR NOT NULL, created_at DATE NOT NULL, account_valid BOOLEAN NOT NULL DEFAULT FALSE);"'
+    #command: 'echo /app/migrations/2024-06-24-08033_confirmation_tokens/up.sql > "CREATE TABLE confirmation_token (id INTEGER PRIMARY KEY, user_email VARCHAR NOT NULL, token VARCHAR NOT NULL, created_at TIMESTAMP NOT NULL, expires_at TIMESTAMP NOT NULL, confirmed_at TIMESTAMP);"'
+    #command: 'echo /app/migrations/2024-06-24-08033_roles/up.sql > "CREATE TABLE rolesl (id SERIAL PRIMARY KEY, name VARCHAR NOT NULL);"'
+    #command: 'echo /app/migrations/2024-06-24-08033_user_roles/up.sql > ""CREATE TABLE user_roles (user_id INTEGER NOT NULL, role_id INTEGER NOT NULL, PRIMARY KEY (user_id, role_id), FOREIGN KEY (user_id) REFERENCES users(id), FOREIGN KEY (role_id) REFERENCES roles(id));'
+    #command: 'cargo run'
 
 volumes:
   postgres:
