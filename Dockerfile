@@ -1,7 +1,9 @@
 FROM rust:latest
 
-RUN apt-get update -y && apt-get upgrade -y
-RUN apt-get install -y default-mysql-client
+RUN apt-get update -y && \
+    apt-get upgrade -y && \
+#    apt-get install -y default-mysql-client vim
+    apt-get install -y mariadb-client vim 
 
 ENV CARGO_TARGET_DIR=/tmp/target
 

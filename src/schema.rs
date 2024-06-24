@@ -11,7 +11,7 @@ diesel::table! {
 }
 
 diesel::table! {
-    confirmation_token (id) {
+    confirmation_tokens (id) {
         id -> Integer,
         user_email -> VarChar,
         token -> VarChar,
@@ -35,6 +35,6 @@ diesel::table! {
     }
 }
 
-diesel::joinable!(confirmation_token -> user (user_email));
+diesel::joinable!(confirmation_tokens -> user (user_email));
 
-diesel::allow_tables_to_appear_in_same_query!(user, confirmation_token);
+diesel::allow_tables_to_appear_in_same_query!(user, confirmation_tokens);
