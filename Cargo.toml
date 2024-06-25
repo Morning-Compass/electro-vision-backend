@@ -1,5 +1,5 @@
 [package]
-name = "morning-compass-rust"
+name = "morning_compass_api"
 version = "0.1.0"
 edition = "2021"
 
