@@ -1,7 +1,7 @@
 // @generated automatically by Diesel CLI.
 diesel::table! {
-    user (email) {
-        id -> Integer,
+    users (email) {
+        id -> Serial,
         username -> VarChar,
         email -> VarChar,
         password -> VarChar,
@@ -12,7 +12,7 @@ diesel::table! {
 
 diesel::table! {
     confirmation_tokens (id) {
-        id -> Integer,
+        id -> Serial,
         user_email -> VarChar,
         token -> VarChar,
         created_at -> Timestamp,
@@ -30,11 +30,11 @@ diesel::table! {
 
 diesel::table! {
     user_roles (user_id) {
-        user_id -> Integer,
+        user_id -> Serial,
         role_id -> Int4
     }
 }
 
-diesel::joinable!(confirmation_tokens -> user (user_email));
+diesel::joinable!(confirmation_tokens -> users (user_email));
 
-diesel::allow_tables_to_appear_in_same_query!(user, confirmation_tokens);
+diesel::allow_tables_to_appear_in_same_query!(users, confirmation_tokens);
