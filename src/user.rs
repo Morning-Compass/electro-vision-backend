@@ -1,25 +1,18 @@
-use crate::{
-    response::Response,
-    schema::{
-        confirmation_tokens::id,
-        users::{account_valid, created_at, email, password, username},
-    },
+use crate::response::Response;
+use actix_web::{
+    get,
+    web::{self, Data},
+    HttpResponse,
 };
-use actix_web::{get, web::Data, HttpResponse};
-use chrono::Utc;
+use chrono::{NaiveDateTime, Utc};
 use diesel::{prelude::*, result::Error};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    models::User,
-    schema::{confirmation_tokens::created_at, users},
-    DBPConn, DBPool,
-};
+use crate::{DBPConn, DBPool};
 
 pub type Users = Response<User>;
 
-#[allow(unused)]
-#[derive(Queryable, Debug, Serialize, Deserialize, Selectable)]
+#[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]
 #[diesel(table_name = crate::schema::users)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct User {
@@ -27,15 +20,8 @@ pub struct User {
     pub username: String,
     pub email: String,
     pub password: String,
-    pub created_at: chrono::DateTime<Utc>,
+    pub created_at: NaiveDateTime,
     pub account_valid: bool,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct NewUser {
-    pub username: String,
-    pub email: String,
-    pub password: String,
 }
 
 impl User {
@@ -45,28 +31,37 @@ impl User {
             username: new_user.username,
             email: new_user.email,
             password: new_user.password,
-            created_at: Utc::now(),
+            created_at: Utc::now().naive_utc(),
             account_valid: false,
         }
     }
-    pub fn to_dbuser(&self) -> DBUser {
-        DBUser {
-            new_user: {
-            id: 0,
-            username: self.username.clone(),
-            email: self.email.clone(),
-            password: self.password.clone(),
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct NewUser {
+    pub username: String,
+    pub email: String,
+    pub password: String,
+}
+
+impl NewUser {
+    pub fn to_user(&self) -> User {
+        User {
+            id: 0, //temp dont know how db will behawe
+            username: self.username.to_string(),
+            email: self.email.to_string(),
+            password: self.password.to_string(),
             created_at: Utc::now().naive_utc(),
-            account_valid: self.account_valid.clone(),}
+            account_valid: false,
         }
     }
 }
 
-pub struct DBUser {
+pub struct UserRequest {
     pub new_user: Option<NewUser>,
 }
 
-impl DBUser {
+impl UserRequest {
     pub fn to_user(&self) -> Option<User> {
         match &self.new_user {
             Some(new_user) => Some(User::new(new_user.clone())),
@@ -76,14 +71,18 @@ impl DBUser {
 }
 
 #[get("/users")]
-pub async fn list(pool: Data<DBPool>, amount: i64, conn: &DBPConn) -> HttpResponse {
-    HttpResponse::Ok().json("Hey")
+pub async fn list(pool: Data<DBPool>) -> HttpResponse {
+    let conn = pool.get().expect("CONNECTION_POOL_ERROR");
+    match web::block(move || list_users(50, &conn)).await {
+        Ok(users) => HttpResponse::Ok().json(users),
+        Err(_) => HttpResponse::InternalServerError().finish(),
+    }
 }
 
 pub async fn list_users(amount: i64, conn: &DBPConn) -> Result<Users, Error> {
     use crate::schema::users::dsl::*;
 
-    let _users = match users
+    let users_query = match users
         .order(created_at.desc())
         .limit(amount)
         .load::<User>(conn)
@@ -93,9 +92,6 @@ pub async fn list_users(amount: i64, conn: &DBPConn) -> Result<Users, Error> {
     };
 
     Ok(Users {
-        results: _users
-            .into_iter()
-            .map(|u| u.to_user())
-            .collect::<Vec<User>>(),
+        results: users_query.into_iter().collect(),
     })
 }
