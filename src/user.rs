@@ -9,7 +9,7 @@ use actix_web::{
 use chrono::Utc;
 use diesel::{prelude::*, result::Error};
 
-use crate::{DBPConn, DBPool};
+use crate::DBPool;
 
 pub type Users = Response<User>;
 
@@ -26,14 +26,15 @@ impl User {
     }
 }
 
-pub async fn list_users(amount: i64, conn: &mut DBPConn) -> Result<Users, Error> {
+pub async fn list_users(amount: i64, pool: Data<DBPool>) -> Result<Users, Error> {
     use crate::schema::users::dsl::*;
+    let mut conn = pool.get().expect(CONNECTION_POOL_ERROR);
 
     let users_query = match users
         .select(User::as_select())
         .order(created_at.desc())
         .limit(amount)
-        .load::<User>(conn)
+        .load::<User>(&mut conn)
     {
         Ok(usr) => usr,
         Err(_) => vec![],
@@ -46,17 +47,13 @@ pub async fn list_users(amount: i64, conn: &mut DBPConn) -> Result<Users, Error>
 
 #[get("/users")]
 pub async fn list(pool: Data<DBPool>) -> HttpResponse {
-    let pool = pool.clone();
-    let users_listed = web::block(move || {
-        let mut conn = pool.get().expect(CONNECTION_POOL_ERROR);
-        list_users(50, &mut conn)
-    })
-    .await
-    .map_err(|e| {
-        eprintln!("Failed to list users: {:?}", e);
-        HttpResponse::InternalServerError().finish()
-    })
-    .unwrap();
+    let users_listed = web::block(move || list_users(50, pool))
+        .await
+        .map_err(|e| {
+            eprintln!("Failed to list users: {:?}", e);
+            HttpResponse::InternalServerError().finish()
+        })
+        .unwrap();
 
     match users_listed.await {
         Ok(users) => HttpResponse::Ok()

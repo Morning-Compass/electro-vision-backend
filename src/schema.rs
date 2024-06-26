@@ -2,7 +2,7 @@
 
 diesel::table! {
     confirmation_tokens (id) {
-        id -> Serial,
+        id -> Int4,
         user_email -> Varchar,
         token -> Varchar,
         created_at -> Timestamp,
@@ -13,21 +13,21 @@ diesel::table! {
 
 diesel::table! {
     roles (id) {
-        id -> Serial,
+        id -> Int4,
         name -> Varchar,
     }
 }
 
 diesel::table! {
     user_roles (user_id, role_id) {
-        user_id -> Serial,
+        user_id -> Int4,
         role_id -> Int4,
     }
 }
 
 diesel::table! {
     users (id) {
-        id -> Serial,
+        id -> Int4,
         username -> Varchar,
         email -> Varchar,
         password -> Varchar,
