@@ -46,16 +46,22 @@ pub async fn list_users(amount: i64, conn: &mut DBPConn) -> Result<Users, Error>
 
 #[get("/users")]
 pub async fn list(pool: Data<DBPool>) -> HttpResponse {
-    let mut conn = pool.get().expect(CONNECTION_POOL_ERROR);
-    let users_listed = web::block(move || list_users(50, &mut conn))
-        .await
-        .map(|e| {
-            eprintln!("Failed to list users: {:?}", e);
-            HttpResponse::InternalServerError().finish()
-        })
-        .unwrap();
+    let pool = pool.clone();
+    let users_listed = web::block(move || {
+        let mut conn = pool.get().expect(CONNECTION_POOL_ERROR);
+        list_users(50, &mut conn)
+    })
+    .await
+    .map_err(|e| {
+        eprintln!("Failed to list users: {:?}", e);
+        HttpResponse::InternalServerError().finish()
+    })
+    .unwrap();
 
-    HttpResponse::Ok()
-        .content_type(APPLICATION_JSON)
-        .json(users_listed)
+    match users_listed.await {
+        Ok(users) => HttpResponse::Ok()
+            .content_type(APPLICATION_JSON)
+            .json(users),
+        Err(_) => HttpResponse::InternalServerError().finish(),
+    }
 }
