@@ -1,46 +1,37 @@
-
-mod endpoints;
 mod models;
+mod response;
 mod schema;
 mod services;
+mod user;
 
-#[macro_use]
-extern crate diesel;
+use std::env;
 
-use actix_web::{dev::ServiceRequest, web, App, Error, HttpServer};
+use actix_web::{middleware, App, HttpServer};
 use diesel::{
-    prelude::*,
-    r2d2::{self, ConnectionManager},
+    r2d2::{self, ConnectionManager, Pool, PooledConnection},
     PgConnection,
 };
 use dotenv::dotenv;
 
-use std::env;
-
-pub type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
-
-pub fn establish_connection() -> PgConnection {
-    dotenv().ok();
-    let db_url: String = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    PgConnection::establish(&db_url).unwrap_or_else(|_| panic!("Error connecting to {}", db_url))
-}
+pub type DBPool = Pool<ConnectionManager<PgConnection>>;
+pub type DBPConn = PooledConnection<ConnectionManager<PgConnection>>;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
 
-    let db_url: String = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-
-    let pool: Pool = Pool::builder()
-        .build(ConnectionManager::<PgConnection>::new(db_url))
+    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let manager = ConnectionManager::<PgConnection>::new(database_url);
+    let pool = r2d2::Pool::builder()
+        .build(manager)
         .expect("Failed to create pool");
 
     HttpServer::new(move || {
         App::new()
             .app_data(pool.clone())
-            .service(endpoints::get_users)
+            .wrap(middleware::Logger::default())
     })
-    .bind(("127.0.0.1", 8080))?
+    .bind("127.0.0.1:3500")?
     .run()
     .await
 }

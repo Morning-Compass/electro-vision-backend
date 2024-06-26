@@ -1,5 +1,5 @@
 use crate::schema::*;
-use chrono::NaiveDateTime;
+use chrono::Utc;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -12,7 +12,7 @@ pub struct User {
     pub username: String,
     pub email: String,
     pub password: String,
-    pub created_at: NaiveDateTime,
+    pub created_at: chrono::DateTime<Utc>,
     pub account_valid: bool,
 }
 
@@ -22,6 +22,6 @@ pub struct NewUser<'a> {
     pub username: &'a str,
     pub email: &'a str,
     pub password: &'a str,
-    pub created_at: NaiveDateTime,
+    pub created_at: chrono::DateTime<Utc>,
     pub account_valid: bool,
 }
