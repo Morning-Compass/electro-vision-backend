@@ -1,0 +1,61 @@
+{
+  "response": {
+    "auth": {
+      "register": {
+        "auth_register_error": {
+          "key": "register_error",
+          "message": "Username or Email is invalid",
+          "status": "502"
+        },
+        "auth_register_success": {
+          "key": "register_success",
+          "message": "User registered successfully",
+          "status": "502"
+        }
+      },
+      "validate": {
+        "account_validation_success": {
+          "key": "validation_success",
+          "message": "Account validated successfully",
+          "status": "502"
+        },
+        "account_validation_token_invalid": {
+          "key": "validation_error",
+          "message": "Token invalid",
+          "status": "502"
+        }
+      },
+      "email_resend": {
+        "email_resend_success": {
+          "message": "Email sent successfully",
+          "status": "200"
+        }
+      },
+      "login_username": {
+        "login_username_success": {
+          "key": "login_success",
+          "message": "User logged in successfully",
+          "status": "200"
+        },
+        "login_username_error": {
+          "key": "login_error",
+          "message": "Incorrect credentials",
+          "status": "502"
+        }
+      },
+      "login_email": {
+        "login_email_success": {
+          "key": "login_success",
+          "message": "User logged in successfully",
+          "status": "502"
+        },
+        "login_email_error": {
+          "key": "login_error",
+          "message": "Incorrect credentials",
+          "status": "502"
+        }
+      }
+    }
+  }
+
+}

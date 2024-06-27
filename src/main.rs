@@ -1,3 +1,4 @@
+mod auth;
 mod constants;
 mod models;
 mod response;
@@ -6,6 +7,8 @@ mod user;
 
 use std::env;
 
+use crate::constants::CONNECTION_POOL_ERROR;
+use actix_web::web::Data;
 use actix_web::{middleware, App, HttpServer};
 use diesel::{
     r2d2::{self, ConnectionManager, Pool, PooledConnection},
@@ -13,8 +16,12 @@ use diesel::{
 };
 use dotenv::dotenv;
 
-pub type DBPool = Pool<ConnectionManager<PgConnection>>;
+type DBPool = Pool<ConnectionManager<PgConnection>>;
 pub type DBPConn = PooledConnection<ConnectionManager<PgConnection>>;
+pub type DPool = Data<DBPool>;
+pub fn est_conn(pool: Data<DBPool>) -> PooledConnection<ConnectionManager<PgConnection>> {
+    pool.get().expect(CONNECTION_POOL_ERROR)
+}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -32,6 +39,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(actix_web::web::Data::new(pool.clone()))
             .wrap(middleware::Logger::default())
             .service(user::list)
+            .service(auth::register)
     })
     .bind("127.0.0.1:3500")?
     .run()
