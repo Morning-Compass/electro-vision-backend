@@ -1,25 +1,32 @@
-use crate::constants::APPLICATION_JSON;
 use crate::models::User;
 use crate::response::Response;
+use crate::{constants::APPLICATION_JSON, models};
 use actix_web::{
     get,
     web::{self},
     HttpResponse,
 };
-use chrono::Utc;
+use chrono::{NaiveDateTime, Utc};
 use diesel::{prelude::*, result::Error};
 
-use crate::{est_conn, models, DPool};
+use crate::{est_conn, DPool};
 
 pub type Users = Response<Vec<User>>;
 
+pub struct NoIdUser {
+    pub username: String,
+    pub email: String,
+    pub password: String,
+    pub created_at: NaiveDateTime,
+    pub account_valid: bool,
+}
+
 impl models::User {
-    pub fn new(self) -> Self {
-        Self {
-            id: 0,
-            username: self.username,
-            email: self.email,
-            password: self.password,
+    pub fn new(username: String, email: String, password: String) -> NoIdUser {
+        NoIdUser {
+            username,
+            email,
+            password,
             created_at: Utc::now().naive_utc(),
             account_valid: false,
         }

@@ -4,7 +4,7 @@ DROP TABLE IF EXISTS confirmation_tokens;
 DROP TABLE IF EXISTS users;
 
 CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
+    id SERIAL PRIMARY KEY ,
     username VARCHAR NOT NULL,
     email VARCHAR NOT NULL UNIQUE,
     password VARCHAR NOT NULL,

@@ -1,9 +1,9 @@
 use crate::models::User;
 use crate::schema::users;
+use crate::user::NoIdUser;
 use crate::{est_conn, response, DPool};
 use actix_web::web;
 use actix_web::{post, web::Json, HttpResponse};
-use chrono::Utc;
 use diesel::prelude::*;
 use serde_derive::Deserialize;
 
@@ -16,9 +16,15 @@ struct RegisterRequest {
 
 type Register = response::Response<String>;
 
-pub async fn insert_user(new_user: User, pool: DPool) -> Result<Register, String> {
+pub async fn insert_user(new_user: NoIdUser, pool: DPool) -> Result<Register, String> {
     match diesel::insert_into(users::table)
-        .values(&new_user)
+        .values((
+            users::username.eq(new_user.username),
+            users::email.eq(new_user.email),
+            users::password.eq(new_user.password),
+            users::created_at.eq_all(new_user.created_at),
+            users::account_valid.eq(new_user.account_valid),
+        ))
         .execute(&mut est_conn(pool))
     {
         Ok(_) => Ok(Register::new("User registered successfully".to_string())),
@@ -31,14 +37,11 @@ pub async fn insert_user(new_user: User, pool: DPool) -> Result<Register, String
 
 #[post("/register")]
 pub async fn register(request: Json<RegisterRequest>, pool: DPool) -> HttpResponse {
-    let new_user = User {
-        id: 0,
-        username: request.username.clone(),
-        email: request.email.clone(),
-        password: request.password.clone(),
-        created_at: Utc::now().naive_utc(),
-        account_valid: false,
-    };
+    let new_user = User::new(
+        request.username.clone(),
+        request.email.clone(),
+        request.password.clone(),
+    );
 
     let registered_user = web::block(move || insert_user(new_user, pool))
         .await
