@@ -47,7 +47,7 @@ pub async fn list_users(amount: i64, pool: Data<DBPool>) -> Result<Users, Error>
     };
 
     Ok(Users {
-        results: users_query.into_iter().collect(),
+        response: users_query.into_iter().collect(),
     })
 }
 
