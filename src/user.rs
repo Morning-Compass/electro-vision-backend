@@ -1,3 +1,5 @@
+use std::fmt::format;
+
 use crate::constants::{APPLICATION_JSON, CONNECTION_POOL_ERROR};
 use crate::models::User;
 use crate::response::Response;
@@ -8,6 +10,7 @@ use actix_web::{
 };
 use chrono::Utc;
 use diesel::{prelude::*, result::Error};
+use serde::Serialize;
 
 use crate::DBPool;
 
@@ -37,12 +40,21 @@ pub async fn list_users(amount: i64, pool: Data<DBPool>) -> Result<Users, Error>
         .load::<User>(&mut conn)
     {
         Ok(usr) => usr,
-        Err(_) => vec![],
+        Err(e) => {
+            eprintln!("Error querying users {:?}", e);
+            vec![]
+        }
     };
 
     Ok(Users {
         results: users_query.into_iter().collect(),
     })
+}
+
+#[derive(Serialize)]
+struct UsersWithMessage {
+    message: String,
+    users: Users,
 }
 
 #[get("/users")]
@@ -56,9 +68,18 @@ pub async fn list(pool: Data<DBPool>) -> HttpResponse {
         .unwrap();
 
     match users_listed.await {
-        Ok(users) => HttpResponse::Ok()
-            .content_type(APPLICATION_JSON)
-            .json(users),
-        Err(_) => HttpResponse::InternalServerError().finish(),
+        Ok(users) => {
+            let response = UsersWithMessage {
+                message: "hey users!".to_string(),
+                users,
+            };
+            HttpResponse::Ok()
+                .content_type(APPLICATION_JSON)
+                .json(response)
+        }
+        Err(e) => {
+            eprintln!("Failed to serialize users {:?}", e);
+            HttpResponse::InternalServerError().finish()
+        }
     }
 }

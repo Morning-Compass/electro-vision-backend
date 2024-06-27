@@ -33,7 +33,7 @@ services:
       - MY_LOG_LEVEL=info
       - MY_LOG_STYLE=Always
       - DATABASE_URL=postgresql://postgres:password@db:5432/morning-compass
-    command: 'bash -c "/wait-for-it.sh db:5432 -q && cargo run"'
+    command: 'bash -c "/wait-for-it.sh db:5432 -q && diesel migration run && cargo run"'
     depends_on:
       - db
     networks:
