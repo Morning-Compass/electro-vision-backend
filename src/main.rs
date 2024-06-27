@@ -1,31 +1,39 @@
-mod db_utils;
+mod constants;
 mod models;
+mod response;
 mod schema;
-mod services;
+mod user;
 
-use actix::SyncArbiter;
-use actix_web::{web::Data, App, HttpServer};
+use std::env;
+
+use actix_web::{middleware, App, HttpServer};
 use diesel::{
-    r2d2::{ConnectionManager, Pool},
+    r2d2::{self, ConnectionManager, Pool, PooledConnection},
     PgConnection,
 };
 use dotenv::dotenv;
 
-use db_utils::{get_pool, AppState, DbActor};
-use std::env;
+pub type DBPool = Pool<ConnectionManager<PgConnection>>;
+pub type DBPConn = PooledConnection<ConnectionManager<PgConnection>>;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
-    let db_url: String = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let pool: Pool<ConnectionManager<PgConnection>> = get_pool(&db_url);
-    let db_addr = SyncArbiter::start(5, move || DbActor(pool.clone()));
+    env_logger::init();
+
+    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let manager = ConnectionManager::<PgConnection>::new(database_url);
+    let pool = r2d2::Pool::builder()
+        .build(manager)
+        .expect("Failed to create pool");
+
     HttpServer::new(move || {
-        App::new().app_data(Data::new(AppState {
-            db: db_addr.clone(),
-        }))
+        App::new()
+            .app_data(actix_web::web::Data::new(pool.clone()))
+            .wrap(middleware::Logger::default())
+            .service(user::list)
     })
-    .bind(("127.0.0.1", 8080))?
+    .bind("127.0.0.1:3500")?
     .run()
     .await
 }
