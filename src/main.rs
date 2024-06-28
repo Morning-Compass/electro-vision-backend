@@ -40,6 +40,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(middleware::Logger::default())
             .service(user::list)
             .service(auth::register::register)
+            .service(auth::login::login_username)
     })
     .bind("127.0.0.1:3500")?
     .run()

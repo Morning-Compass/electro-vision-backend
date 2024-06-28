@@ -3,15 +3,38 @@ use crate::models::User;
 use crate::{est_conn, response, DPool};
 use actix_web::web;
 use actix_web::{post, web::Json, HttpResponse};
+use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use diesel::result::Error;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 type LoginUser = response::Response<User>;
+type LoginUserSuccess = response::Response<ResponseUser>;
 type LoginUserError = response::Response<String>;
 
+#[derive(Serialize)]
+struct ResponseUser {
+    id: i32,
+    username: String,
+    email: String,
+    created_at: NaiveDateTime,
+    account_valid: bool,
+}
+
+impl ResponseUser {
+    fn new(user: User) -> Self {
+        Self {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            created_at: user.created_at,
+            account_valid: user.account_valid,
+        }
+    }
+}
+
 #[derive(Deserialize)]
-struct RequestLoginUsername {
+pub struct RequestLoginUsername {
     username: String,
     password: String,
 }
@@ -21,22 +44,11 @@ pub async fn list_user_by_username(
     pool: DPool,
 ) -> Result<LoginUser, Error> {
     use crate::schema::users::dsl::*;
-    let hashed_password = match bcrypt::hash(req.password, bcrypt::DEFAULT_COST) {
-        Ok(hp) => hp,
-        Err(_) => return Err(Error::RollbackTransaction),
-    };
 
-    match users
+    users
         .filter(username.eq(req.username))
-        .filter(password.eq(hashed_password))
         .first::<User>(&mut est_conn(pool))
-    {
-        Ok(usr) => Ok(LoginUser::new(usr)),
-        Err(e) => {
-            eprintln!("Error selecting user, {:?}", e);
-            Err(Error::RollbackTransaction)
-        }
-    }
+        .map(|usr| LoginUser::new(usr))
 }
 
 #[post("/login-username")]
@@ -50,14 +62,31 @@ pub async fn login_username(request: Json<RequestLoginUsername>, pool: DPool) ->
         .unwrap();
 
     match user.await {
-        Ok(usr) => HttpResponse::Ok()
-            .content_type(APPLICATION_JSON)
-            .json(LoginUser {
-                response: usr.response,
-            }),
+        Ok(usr) => match bcrypt::verify(&request.password, &usr.response.password) {
+            Ok(valid) if valid => HttpResponse::Ok()
+                .content_type(APPLICATION_JSON)
+                .json(LoginUserSuccess::new(ResponseUser::new(usr.response))),
+            Ok(_) => HttpResponse::BadRequest()
+                .json(LoginUserError::new("password is incorrect".to_string())),
+            Err(_) => {
+                eprintln!(
+                    "given password: \n {} \n db password \n {}",
+                    &request.password, &usr.response.password
+                );
+                HttpResponse::InternalServerError()
+                    .json(LoginUserError::new("Failed to verify password".to_string()))
+            }
+        },
+        Err(Error::NotFound) => {
+            eprintln!("User with provided username was not found");
+            HttpResponse::NotFound().json(LoginUserError::new(format!(
+                "User with username {} was not found",
+                request.username,
+            )))
+        }
         Err(e) => {
             eprintln!("Error matching users in login_username {:?}", e);
-            HttpResponse::BadRequest().json(LoginUserError {
+            HttpResponse::InternalServerError().json(LoginUserError {
                 response: "Error ".to_string(),
             })
         }
