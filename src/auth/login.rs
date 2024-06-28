@@ -39,25 +39,19 @@ pub struct RequestLoginUsername {
     password: String,
 }
 
-pub async fn list_user_by_username(
-    req: RequestLoginUsername,
-    pool: DPool,
-) -> Result<LoginUser, Error> {
+pub async fn list_user_by_username(user_username: String, pool: DPool) -> Result<LoginUser, Error> {
     use crate::schema::users::dsl::*;
 
     users
-        .filter(username.eq(req.username))
+        .filter(username.eq(user_username))
         .first::<User>(&mut est_conn(pool))
         .map(|usr| LoginUser::new(usr))
 }
 
 #[post("/login-username")]
 pub async fn login_username(request: Json<RequestLoginUsername>, pool: DPool) -> HttpResponse {
-    let user_username_credentials = RequestLoginUsername {
-        username: request.username.clone(),
-        password: request.password.clone(),
-    };
-    let user = web::block(move || list_user_by_username(user_username_credentials, pool))
+    let user_username = request.username.clone();
+    let user = web::block(move || list_user_by_username(user_username, pool))
         .await
         .unwrap();
 
