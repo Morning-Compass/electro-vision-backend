@@ -20,11 +20,16 @@ type Register = response::Response<String>;
 pub async fn insert_user(new_user: NoIdUser, pool: DPool) -> Result<Register, Error> {
     use crate::schema::users::dsl::*;
 
+    let hashed_passowrd = match bcrypt::hash(new_user.password, bcrypt::DEFAULT_COST) {
+        Ok(hp) => hp,
+        Err(_) => return Err(diesel::result::Error::RollbackTransaction),
+    };
+
     diesel::insert_into(users)
         .values((
             username.eq(new_user.username),
             email.eq(new_user.email),
-            password.eq(new_user.password),
+            password.eq(hashed_passowrd),
             created_at.eq_all(new_user.created_at),
             account_valid.eq(new_user.account_valid),
         ))
