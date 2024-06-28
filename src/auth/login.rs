@@ -1,6 +1,6 @@
 use crate::constants::APPLICATION_JSON;
-use crate::models::User;
-use crate::{est_conn, response, DPool};
+use crate::models::{self, User, UserRole};
+use crate::{est_conn, response, schema, DPool};
 use actix_web::web;
 use actix_web::{post, web::Json, HttpResponse};
 use chrono::NaiveDateTime;
@@ -9,26 +9,52 @@ use diesel::result::Error;
 use serde::{Deserialize, Serialize};
 
 type LoginUser = response::Response<User>;
-type LoginUserSuccess = response::Response<ResponseUser>;
 type LoginUserError = response::Response<String>;
+type FullUser = response::Response<UserWithRoles>;
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
+struct UserWithRoles {
+    id: i32,
+    username: String,
+    password: String,
+    email: String,
+    created_at: NaiveDateTime,
+    account_valid: bool,
+    roles: Vec<String>,
+}
+
 struct ResponseUser {
     id: i32,
     username: String,
     email: String,
     created_at: NaiveDateTime,
     account_valid: bool,
+    roles: Vec<String>,
+}
+
+impl UserWithRoles {
+    fn new(user: User, roles: Vec<String>) -> Self {
+        Self {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            password: user.password,
+            created_at: user.created_at,
+            account_valid: user.account_valid,
+            roles,
+        }
+    }
 }
 
 impl ResponseUser {
-    fn new(user: User) -> Self {
+    fn new(user: User, roles: Vec<String>) -> Self {
         Self {
             id: user.id,
             username: user.username,
             email: user.email,
             created_at: user.created_at,
             account_valid: user.account_valid,
+            roles,
         }
     }
 }
@@ -39,13 +65,32 @@ pub struct RequestLoginUsername {
     password: String,
 }
 
-pub async fn list_user_by_username(user_username: String, pool: DPool) -> Result<LoginUser, Error> {
+pub async fn list_user_by_username(
+    user_username: String,
+    pool: DPool,
+) -> Result<UserWithRoles, Error> {
+    use crate::schema::roles::dsl::*;
+    use crate::schema::user_roles::dsl::*;
     use crate::schema::users::dsl::*;
 
-    users
-        .filter(username.eq(user_username))
-        .first::<User>(&mut est_conn(pool))
-        .map(|usr| LoginUser::new(usr))
+    let user_result = users
+        .filter(username.eq(&user_username))
+        .first::<User>(&mut est_conn(pool.clone()))
+        .optional()?;
+
+    let usr = match user_result {
+        Some(user) => user,
+        None => return Err(Error::NotFound),
+    };
+
+    let user_roles_result = schema::user_roles::table
+        .inner_join(schema::roles::table)
+        .filter(schema::user_roles::user_id.eq(usr.id))
+        .select(schema::roles::name)
+        .load::<String>(&mut est_conn(pool))
+        .unwrap_or_else(|_| vec![]);
+
+    Ok(UserWithRoles::new(usr, user_roles_result))
 }
 
 #[post("/login-username")]
@@ -56,16 +101,16 @@ pub async fn login_username(request: Json<RequestLoginUsername>, pool: DPool) ->
         .unwrap();
 
     match user.await {
-        Ok(usr) => match bcrypt::verify(&request.password, &usr.response.password) {
+        Ok(usr) => match bcrypt::verify(&request.password, &usr.password) {
             Ok(valid) if valid => HttpResponse::Ok()
                 .content_type(APPLICATION_JSON)
-                .json(LoginUserSuccess::new(ResponseUser::new(usr.response))),
+                .json(FullUser::new(usr)),
             Ok(_) => HttpResponse::BadRequest()
                 .json(LoginUserError::new("password is incorrect".to_string())),
             Err(_) => {
                 eprintln!(
                     "given password: \n {} \n db password \n {}",
-                    &request.password, &usr.response.password
+                    &request.password, &usr.password
                 );
                 HttpResponse::InternalServerError()
                     .json(LoginUserError::new("Failed to verify password".to_string()))
