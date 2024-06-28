@@ -18,7 +18,7 @@ pub struct User {
 #[diesel(table_name = crate::schema::roles)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Role {
-    pub id: i32,
+    pub id: i16,
     pub name: String,
 }
 
@@ -27,7 +27,7 @@ pub struct Role {
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct UserRole {
     pub user_id: i32,
-    pub role_id: i32,
+    pub role_id: i16,
 }
 
 #[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]
@@ -41,3 +41,4 @@ pub struct ConfirmationToken {
     pub expires_at: NaiveDateTime,
     pub confirmed_at: Option<NaiveDateTime>,
 }
+
