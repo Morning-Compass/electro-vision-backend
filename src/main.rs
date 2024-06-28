@@ -41,6 +41,7 @@ async fn main() -> std::io::Result<()> {
             .service(user::list)
             .service(auth::register::register)
             .service(auth::login::login_username)
+            .service(auth::login::login_email)
     })
     .bind("127.0.0.1:3500")?
     .run()
