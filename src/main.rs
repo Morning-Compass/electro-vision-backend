@@ -39,7 +39,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(actix_web::web::Data::new(pool.clone()))
             .wrap(middleware::Logger::default())
             .service(user::list)
-            .service(auth::register)
+            .service(auth::register::register)
     })
     .bind("127.0.0.1:3500")?
     .run()
