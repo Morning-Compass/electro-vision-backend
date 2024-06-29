@@ -1,14 +1,11 @@
 use chrono::{NaiveDateTime, TimeDelta, Utc};
-use diesel::{ExpressionMethods, Insertable, RunQueryDsl};
-use diesel::result::Error;
+use diesel::prelude::OptionalExtension;
+use diesel::query_dsl::methods::FilterDsl;
+use diesel::{ExpressionMethods, RunQueryDsl}; // Import this for `optional` method
 
-use crate::{
-    auth::confirmation_token::token,
-    constants::CONFIRMATION_TOKEN_EXIPIRATION_TIME,
-    est_conn, response,
-    schema::{confirmation_tokens, users::created_at},
-    DPool,
-};
+use crate::schema::users::{account_valid, email};
+use crate::{constants::CONFIRMATION_TOKEN_EXIPIRATION_TIME, est_conn, DPool};
+use crate::{models, schema};
 
 struct Cft {
     pub user_email: String,
@@ -29,11 +26,11 @@ trait ConfirmationToken {
 }
 
 impl ConfirmationToken for Cft {
-    fn new(email: String, pool: DPool) -> Result<String, diesel::result::Error> {
+    fn new(u_email: String, pool: DPool) -> Result<String, diesel::result::Error> {
         use crate::schema::confirmation_tokens::dsl::*;
 
         let ctoken = Cft {
-            user_email: email,
+            user_email: u_email,
             token: uuid::Uuid::new_v4().to_string(),
             created_at: Utc::now().naive_utc(),
             expires_at: Utc::now()
@@ -61,11 +58,53 @@ impl ConfirmationToken for Cft {
         }
     }
 
-    fn confirm(token: Cft, pool: DPool) -> Result<String, Error> {
-        todo!()
+    fn confirm(user_token: Cft, pool: DPool) -> Result<String, diesel::result::Error> {
+        use crate::schema::confirmation_tokens::dsl::*;
+        let mut conn = est_conn(pool);
+
+        let db_token = match confirmation_tokens
+            .filter(user_email.eq(&user_token.user_email))
+            .filter(token.eq(&user_token.token))
+            .first::<models::ConfirmationToken>(&mut conn)
+            .optional()?
+        {
+            Some(tok) => {
+                let current_time = Utc::now().naive_utc();
+                if current_time > tok.expires_at {
+                    Err(diesel::result::Error::NotFound) // Custom error message can be mapped later
+                } else {
+                    Ok(tok)
+                }
+            }
+            None => Err(diesel::result::Error::NotFound),
+        };
+
+        match db_token {
+            Ok(_) => {
+                match diesel::update(
+                    schema::users::dsl::users
+                        .filter(schema::users::dsl::email.eq(user_token.user_email)),
+                )
+                .set(account_valid.eq(true))
+                .execute(&mut conn)
+                {
+                    Ok(_) => Ok("Account verified".to_string()),
+                    Err(e) => Err(diesel::result::Error::DatabaseError(
+                        diesel::result::DatabaseErrorKind::UnableToSendCommand,
+                        Box::new(format!("Error while updating account: {}", e)),
+                    )),
+                }
+            }
+            Err(e) => Err(e),
+        }
     }
 
-    fn send(token: String, username: String, email: String, pool: DPool) -> Result<String, Error> {
+    fn send(
+        token: String,
+        username: String,
+        u_email: String,
+        pool: DPool,
+    ) -> Result<String, diesel::result::Error> {
         todo!()
     }
 }
