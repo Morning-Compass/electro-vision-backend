@@ -6,6 +6,8 @@ mod schema;
 mod user;
 
 use std::env;
+use std::fs::File;
+use std::io::Read;
 
 use crate::constants::CONNECTION_POOL_ERROR;
 use actix_web::web::Data;
@@ -23,10 +25,18 @@ pub fn est_conn(pool: Data<DBPool>) -> PooledConnection<ConnectionManager<PgConn
     pool.get().expect(CONNECTION_POOL_ERROR)
 }
 
+pub type ResponseKeys = Data<serde_json::Value>;
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
     env_logger::init();
+
+    let mut file = File::open("api-response.json")?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+
+    let response_keys = response::JsonResponse::read(&contents);
 
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     let manager = ConnectionManager::<PgConnection>::new(database_url);
@@ -37,6 +47,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(actix_web::web::Data::new(pool.clone()))
+            .app_data(actix_web::web::Data::new(response_keys.clone()))
             .wrap(middleware::Logger::default())
             .service(user::list)
             .service(auth::register::register)

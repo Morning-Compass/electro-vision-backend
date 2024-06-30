@@ -1,3 +1,4 @@
+use std::fs::File;
 use actix_web::{HttpResponse, post, web::Json};
 use actix_web::web;
 use diesel::prelude::*;
@@ -7,9 +8,10 @@ use serde_derive::Deserialize;
 
 use auth::confirmation_token::token::ConfirmationToken;
 
-use crate::{auth, DPool, est_conn, response};
+use crate::{auth, DPool, est_conn, response, ResponseKeys};
 use crate::auth::confirmation_token::token::Cft;
 use crate::models::User;
+use crate::response::JsonResponse;
 use crate::user::NoIdUser;
 
 #[derive(Deserialize, Clone)]
@@ -72,8 +74,26 @@ pub async fn insert_user_roles(usr_id: i32, pool :DPool) -> Result<String, Error
     }
 }
 
+pub struct RegisterJsonResponse {
+    ok_key: String,
+    ok_value: String,
+    err_internal_key: String,
+    err_internal_value: String,
+    err_email_exists_key: String,
+    err_email_exists_value: String,
+}
+
 #[post("/register")]
-pub async fn register(request: Json<RegisterRequest>, pool: DPool) -> HttpResponse {
+pub async fn register(request: Json<RegisterRequest>, pool: DPool, response_keys: ResponseKeys) -> HttpResponse {
+    let keys = RegisterJsonResponse {
+        ok_key: response_keys["register_success"]["key"].to_string(),
+        ok_value: response_keys["register_success"]["message"].to_string(),
+        err_internal_key: response_keys["register_server_error"]["key"].to_string(),
+        err_internal_value: response_keys["register_server_error"]["message"].to_string(),
+        err_email_exists_key: response_keys["register_client_error"]["key"].to_string(),
+        err_email_exists_value: response_keys["register_client_error"]["message"].to_string(),
+    };
+
     let new_user = User::new(
         request.username.clone(),
         request.email.clone(),
@@ -88,20 +108,14 @@ pub async fn register(request: Json<RegisterRequest>, pool: DPool) -> HttpRespon
     match registered_user.await {
         Ok(usr) => {
             match (insert_user_roles(usr.id, pool.clone()).await, <Cft as ConfirmationToken>::new(request.email.clone(), pool) ) {
-                (Ok(_), Ok(_)) => HttpResponse::Ok().json(Register {
-                    response: "User registered successfully!".to_string(),
-                }),
+                (Ok(_), Ok(_)) => HttpResponse::Ok().json(JsonResponse::new(keys.ok_key, keys.ok_value)),
                 (Err(e), _) => {
                     eprintln!("Error inserting user roles: {:?}", e);
-                    HttpResponse::InternalServerError().json(Register {
-                        response: "Error inserting user roles".to_string(),
-                    })
+                    HttpResponse::InternalServerError().json(JsonResponse::new(keys.err_internal_key, keys.err_internal_value))
                 },
                 (_, Err(e)) => {
                     eprintln!("Error while creating token: {:?}", e);
-                    HttpResponse::InternalServerError().json(Register {
-                        response: "User registered successfully but confirmation token failed to be created".to_string(),
-                    })
+                    HttpResponse::InternalServerError().json(JsonResponse::new(keys.err_internal_key, keys.err_internal_value))
                 }
             }
         },
@@ -110,15 +124,11 @@ pub async fn register(request: Json<RegisterRequest>, pool: DPool) -> HttpRespon
                 if let Some(existing_email) = info.details() {
                     eprintln!("Email already exists: {}", existing_email);
                 }
-                HttpResponse::BadRequest().json(Register {
-                    response: "Email already exists".to_string(),
-                })
+                HttpResponse::BadRequest().json(JsonResponse::new(keys.err_email_exists_key, keys.err_email_exists_value))
             }
             _ => {
                 eprintln!("Error registering user: {:?}", e);
-                HttpResponse::InternalServerError().json(Register {
-                    response: "Error registering user".to_string(),
-                })
+                HttpResponse::InternalServerError().json(JsonResponse::new(keys.err_internal_key, keys.err_internal_value))
             }
         },
     }

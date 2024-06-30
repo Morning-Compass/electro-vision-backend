@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Response<T> {
@@ -18,14 +19,11 @@ pub struct JsonResponse {
 
 impl JsonResponse {
     pub fn new(key: String, response: String) -> String {
-        format!(r#"{}: {}"#, key, response)
+        json!({ key: response }).to_string()
     }
 
     pub fn read(value: &str) -> serde_json::Value {
         serde_json::from_str(value).unwrap()
     }
 
-    pub fn stringify<T>(value: T) -> String {
-        serde_json::to_string(&value).expect("couldnt stringify")
-    }
 }
