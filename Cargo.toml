@@ -15,6 +15,7 @@ serde_with = "3.8.1"
 dotenvy = "0.15"
 env_logger = "0.9"
 bcrypt = "0.12"
+serde_json = "1.0.117"
 
 [dependencies.uuid]
 version = "1.9.1"

@@ -1,19 +1,16 @@
-use crate::models::User;
-use crate::user::NoIdUser;
-use crate::{est_conn, response, DPool, auth, schema, models};
+use actix_web::{HttpResponse, post, web::Json};
 use actix_web::web;
-use actix_web::{post, web::Json, HttpResponse};
-use diesel::dsl::{insert_into, select};
 use diesel::prelude::*;
 use diesel::result::DatabaseErrorKind;
 use diesel::result::Error;
 use serde_derive::Deserialize;
+
 use auth::confirmation_token::token::ConfirmationToken;
+
+use crate::{auth, DPool, est_conn, response};
 use crate::auth::confirmation_token::token::Cft;
-use crate::schema::roles::dsl::roles;
-use crate::schema::roles::{id, name};
-use crate::schema::user_roles::dsl::user_roles;
-use crate::schema::user_roles::{role_id, user_id};
+use crate::models::User;
+use crate::user::NoIdUser;
 
 #[derive(Deserialize, Clone)]
 struct RegisterRequest {
@@ -27,7 +24,7 @@ type Register = response::Response<String>;
 pub async fn insert_user(new_user: NoIdUser, pool: DPool) -> Result<User, Error> {
     use crate::schema::users::dsl::*;
 
-    let hashed_passowrd = match bcrypt::hash(new_user.password, bcrypt::DEFAULT_COST) {
+    let hashed_password = match bcrypt::hash(new_user.password, bcrypt::DEFAULT_COST) {
         Ok(hp) => hp,
         Err(_) => return Err(diesel::result::Error::RollbackTransaction),
     };
@@ -36,7 +33,7 @@ pub async fn insert_user(new_user: NoIdUser, pool: DPool) -> Result<User, Error>
         .values((
             username.eq(new_user.username),
             email.eq(new_user.email),
-            password.eq(hashed_passowrd),
+            password.eq(hashed_password),
             created_at.eq_all(new_user.created_at),
             account_valid.eq(new_user.account_valid),
         ))
@@ -53,9 +50,7 @@ pub async fn insert_user(new_user: NoIdUser, pool: DPool) -> Result<User, Error>
 
 pub async fn insert_user_roles(usr_id: i32, pool :DPool) -> Result<String, Error> {
     use crate::schema::user_roles::dsl::*;
-    use crate::schema::roles::dsl::{roles, name as role_name};
-    use diesel::result::Error;
-
+    use crate::schema::roles::dsl::{name as role_name, roles};
     let mut conn = est_conn(pool);
 
     let role_id_value: i16 = roles

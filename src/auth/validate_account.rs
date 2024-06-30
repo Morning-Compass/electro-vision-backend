@@ -1,10 +1,11 @@
-use crate::auth::confirmation_token::token::{Cft, ConfirmationToken};
-use crate::constants::APPLICATION_JSON;
-use crate::{response, DPool};
+use actix_web::HttpResponse;
 use actix_web::put;
 use actix_web::web::Path;
-use actix_web::{web::Json, HttpResponse};
 use serde::Deserialize;
+
+use crate::{DPool, response};
+use crate::auth::confirmation_token::token::{Cft, ConfirmationToken};
+use crate::constants::APPLICATION_JSON;
 
 #[derive(Deserialize)]
 pub struct Token {
