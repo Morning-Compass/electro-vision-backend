@@ -1,4 +1,6 @@
-use chrono::{NaiveDateTime, TimeDelta, Utc};
+use std::ops::Add;
+
+use chrono::{Duration, NaiveDateTime, TimeDelta, Utc};
 use diesel::prelude::OptionalExtension;
 use diesel::query_dsl::methods::FilterDsl;
 use diesel::{ExpressionMethods, RunQueryDsl}; // Import this for `optional` method
@@ -7,16 +9,24 @@ use crate::schema::users::{account_valid, email};
 use crate::{constants::CONFIRMATION_TOKEN_EXIPIRATION_TIME, est_conn, DPool};
 use crate::{models, schema};
 
-struct Cft {
+pub struct Cft {
     pub user_email: String,
     pub token: String,
     pub created_at: NaiveDateTime,
     pub expires_at: NaiveDateTime,
 }
 
-trait ConfirmationToken {
+pub struct ConfirmationTokenRequest {
+    pub user_email: String,
+    pub token_str: String,
+}
+
+pub trait ConfirmationToken {
     fn new(email: String, pool: DPool) -> Result<String, diesel::result::Error>;
-    fn confirm(token: Cft, pool: DPool) -> Result<String, diesel::result::Error>;
+    fn confirm(
+        token: ConfirmationTokenRequest,
+        pool: DPool,
+    ) -> Result<String, diesel::result::Error>;
     fn send(
         token: String,
         username: String,
@@ -58,19 +68,22 @@ impl ConfirmationToken for Cft {
         }
     }
 
-    fn confirm(user_token: Cft, pool: DPool) -> Result<String, diesel::result::Error> {
+    fn confirm(
+        user_token: ConfirmationTokenRequest,
+        pool: DPool,
+    ) -> Result<String, diesel::result::Error> {
         use crate::schema::confirmation_tokens::dsl::*;
         let mut conn = est_conn(pool);
 
         let db_token = match confirmation_tokens
             .filter(user_email.eq(&user_token.user_email))
-            .filter(token.eq(&user_token.token))
+            .filter(token.eq(&user_token.token_str))
             .first::<models::ConfirmationToken>(&mut conn)
             .optional()?
         {
             Some(tok) => {
                 let current_time = Utc::now().naive_utc();
-                if current_time > tok.expires_at {
+                if current_time - Duration::seconds(CONFIRMATION_TOKEN_EXIPIRATION_TIME) > tok.created_at {
                     Err(diesel::result::Error::NotFound) // Custom error message can be mapped later
                 } else {
                     Ok(tok)

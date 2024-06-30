@@ -1,12 +1,14 @@
 use crate::models::User;
 use crate::user::NoIdUser;
-use crate::{est_conn, response, DPool};
+use crate::{est_conn, response, DPool, auth};
 use actix_web::web;
 use actix_web::{post, web::Json, HttpResponse};
 use diesel::prelude::*;
 use diesel::result::DatabaseErrorKind;
 use diesel::result::Error;
 use serde_derive::Deserialize;
+use auth::confirmation_token::token::ConfirmationToken;
+use crate::auth::confirmation_token::token::Cft;
 
 #[derive(Deserialize, Clone)]
 struct RegisterRequest {
@@ -44,15 +46,27 @@ pub async fn register(request: Json<RegisterRequest>, pool: DPool) -> HttpRespon
         request.email.clone(),
         request.password.clone(),
     );
+    let pool_clone = pool.clone();
 
-    let registered_user = web::block(move || insert_user(new_user, pool))
+    let registered_user = web::block(move || insert_user(new_user, pool_clone))
         .await
         .unwrap();
 
     match registered_user.await {
-        Ok(_) => HttpResponse::Ok().json(Register {
-            response: "User registered successfully!".to_string(),
-        }),
+        Ok(_) => {
+            match <Cft as ConfirmationToken>::new(request.email.clone(), pool) {
+                Ok(_) => HttpResponse::Ok().json(Register {
+                    response: "User registered successfully!".to_string(),
+                }),
+                Err(e) => {
+                    eprintln!("Error while creating token");
+                    HttpResponse::InternalServerError().json(Register {
+                        response: "User registered successfully but confirmation token failed do be created".to_string(),
+                    })
+                }
+            }
+
+        },
         Err(e) => match e {
             Error::DatabaseError(DatabaseErrorKind::UniqueViolation, info) => {
                 if let Some(existing_email) = info.details() {
