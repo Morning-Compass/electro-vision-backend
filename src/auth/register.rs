@@ -92,24 +92,20 @@ pub async fn register(request: Json<RegisterRequest>, pool: DPool) -> HttpRespon
 
     match registered_user.await {
         Ok(usr) => {
-            match insert_user_roles(usr.id, pool.clone()).await {
-                Ok(_) => {
-                    match <Cft as ConfirmationToken>::new(request.email.clone(), pool) {
-                        Ok(_) => HttpResponse::Ok().json(Register {
-                            response: "User registered successfully!".to_string(),
-                        }),
-                        Err(e) => {
-                            eprintln!("Error while creating token: {:?}", e);
-                            HttpResponse::InternalServerError().json(Register {
-                                response: "User registered successfully but confirmation token failed to be created".to_string(),
-                            })
-                        }
-                    }
-                },
-                Err(e) => {
+            match (insert_user_roles(usr.id, pool.clone()).await, <Cft as ConfirmationToken>::new(request.email.clone(), pool) ) {
+                (Ok(_), Ok(_)) => HttpResponse::Ok().json(Register {
+                    response: "User registered successfully!".to_string(),
+                }),
+                (Err(e), _) => {
                     eprintln!("Error inserting user roles: {:?}", e);
                     HttpResponse::InternalServerError().json(Register {
                         response: "Error inserting user roles".to_string(),
+                    })
+                },
+                (_, Err(e)) => {
+                    eprintln!("Error while creating token: {:?}", e);
+                    HttpResponse::InternalServerError().json(Register {
+                        response: "User registered successfully but confirmation token failed to be created".to_string(),
                     })
                 }
             }
