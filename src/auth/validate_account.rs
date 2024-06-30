@@ -31,6 +31,10 @@ pub async fn validate_account(user_token: Path<Token>, pool: DPool) -> HttpRespo
                     "Error processing account validation".to_string(),
                 ))
             }
+            diesel::result::Error::AlreadyInTransaction => {
+                HttpResponse::BadRequest()
+                    .json(ValidateResponse::new("Account already verified".to_string()))
+            },
             _ => HttpResponse::InternalServerError().json(ValidateResponse::new(
                 "An unexpected error occurred".to_string(),
             )),
