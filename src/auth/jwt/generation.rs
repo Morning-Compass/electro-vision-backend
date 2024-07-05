@@ -1,15 +1,8 @@
+use crate::auth::jwt::Claims;
 use crate::constants::JWT_EXPIRATION_TIME;
 use chrono::Utc;
 use dotenv;
 use jsonwebtoken::{encode, EncodingKey, Header};
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Serialize, Deserialize)]
-struct Claims {
-    iat: usize,
-    exp: usize,
-    email: String,
-}
 
 pub fn generate(email: &str) -> Result<String, Box<dyn std::error::Error>> {
     let now = Utc::now();

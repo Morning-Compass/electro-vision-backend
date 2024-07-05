@@ -65,10 +65,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn jwt() {
-        match auth::jwt::generate("tomek@el-jot.eu") {
-            Ok(token) => println!("token: {}", token),
-            Err(e) => eprintln!("error: {}", e),
+    fn jwt_generate_and_decode() {
+        // Assuming you have a valid token for testing
+        let token = match auth::jwt::generate("tomek@el-jot.eu") {
+            Ok(token) => {
+                println!("token: {}", token);
+                token
+            }
+            Err(e) => panic!("Error generating token: {}", e),
+        };
+
+        match auth::jwt::decode(token) {
+            Ok(data) => println!("Decoded token data: {:?}", data),
+            Err(e) => eprintln!("Error decoding token: {}", e),
         }
     }
 }
