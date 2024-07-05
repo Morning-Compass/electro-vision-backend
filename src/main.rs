@@ -64,8 +64,18 @@ async fn main() -> std::io::Result<()> {
 mod tests {
     use super::*;
 
+    fn test_est_conn() -> PooledConnection<ConnectionManager<PgConnection>> {
+        let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        let manager = ConnectionManager::<PgConnection>::new(database_url);
+        let pool = r2d2::Pool::builder()
+            .build(manager)
+            .expect("Failed to create pool");
+        pool.get().expect(CONNECTION_POOL_ERROR)
+    }
+
     #[test]
     fn jwt_generate_and_decode() {
+
         // Assuming you have a valid token for testing
         let token = match auth::jwt::generate("tomek@el-jot.eu") {
             Ok(token) => {
@@ -75,9 +85,9 @@ mod tests {
             Err(e) => panic!("Error generating token: {}", e),
         };
 
-        match auth::jwt::decode(token) {
-            Ok(data) => println!("Decoded token data: {:?}", data),
-            Err(e) => eprintln!("Error decoding token: {}", e),
+        match auth::jwt::verify(&*token, test_est_conn()) {
+            true => println!("token verified"),
+            false => println!("token not verified"),
         }
     }
 }
