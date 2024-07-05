@@ -59,3 +59,16 @@ async fn main() -> std::io::Result<()> {
     .run()
     .await
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn jwt() {
+        match auth::jwt::generate("tomek@el-jot.eu") {
+            Ok(token) => println!("token: {}", token),
+            Err(e) => eprintln!("error: {}", e),
+        }
+    }
+}

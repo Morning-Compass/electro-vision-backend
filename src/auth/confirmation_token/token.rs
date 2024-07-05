@@ -70,7 +70,7 @@ impl ConfirmationToken for Cft {
         {
             Some(tok) => {
                 if tok.confirmed_at.is_some() {
-                    return Err(diesel::result::Error::AlreadyInTransaction) // defintelly after auth need to add custom error
+                    return Err(diesel::result::Error::AlreadyInTransaction); // defintelly after auth need to add custom error
                 }
                 let current_time = Utc::now().naive_utc();
                 if current_time - Duration::seconds(CONFIRMATION_TOKEN_EXIPIRATION_TIME)
