@@ -1,12 +1,14 @@
 use std::usize;
 
-use chrono::Utc;
-use diesel::result::Error as DieselError;
-use diesel::{query_dsl::methods::FilterDsl, ExpressionMethods, RunQueryDsl, OptionalExtension, PgConnection};
-use diesel::r2d2::{ConnectionManager, PooledConnection};
 use crate::models::User;
 use crate::schema;
 use crate::{constants::JWT_EXPIRATION_TIME, est_conn, schema::users::dsl::*, DPool};
+use chrono::Utc;
+use diesel::r2d2::{ConnectionManager, PooledConnection};
+use diesel::result::Error as DieselError;
+use diesel::{
+    query_dsl::methods::FilterDsl, ExpressionMethods, OptionalExtension, PgConnection, RunQueryDsl,
+};
 
 fn verify_email(user_email: &str, pool: DPool) -> Result<bool, DieselError> {
     let exists = users
@@ -15,12 +17,8 @@ fn verify_email(user_email: &str, pool: DPool) -> Result<bool, DieselError> {
         .optional()?;
 
     match exists {
-        Ok(Some(_)) => Ok(true),
-        Ok(None) => Ok(false),
-        Err(e) => {
-            eprintln!("Database error: {:?}", e);
-            Err(e)
-        }
+        Some(_) => Ok(true),
+        None => Ok(false),
     }
 }
 

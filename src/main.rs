@@ -62,32 +62,53 @@ async fn main() -> std::io::Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
-    fn test_est_conn() -> PooledConnection<ConnectionManager<PgConnection>> {
+    use super::*;
+    const TEST_EMAIL: &str = "tomek@el-jot.eu";
+
+    fn generate_token() -> String {
+        match auth::jwt::generate(&TEST_EMAIL) {
+            Ok(token) => {
+                println!("token: {}", token);
+                return token;
+            }
+            Err(e) => panic!("Error generating token: {}", e),
+        };
+    }
+
+    async fn helper_validate_token(pool: DPool) -> impl actix_web::Responder {
+        match auth::jwt::verify(&generate_token(), pool) {
+            true => {
+                actix_web::HttpResponse::Ok().json("Logged with token successfully".to_string())
+            }
+            false => actix_web::HttpResponse::BadRequest()
+                .json("Error logging in with token".to_string()),
+        }
+    }
+
+    #[actix_web::test]
+    async fn validate_token() {
         let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
         let manager = ConnectionManager::<PgConnection>::new(database_url);
         let pool = r2d2::Pool::builder()
             .build(manager)
             .expect("Failed to create pool");
-        pool.get().expect(CONNECTION_POOL_ERROR)
-    }
 
-    #[test]
-    fn jwt_generate_and_decode() {
+        let app = actix_web::test::init_service(
+            actix_web::App::new()
+                .app_data(actix_web::web::Data::new(pool.clone()))
+                .route(
+                    "/login_token",
+                    actix_web::web::get().to(helper_validate_token),
+                ),
+        )
+        .await;
 
-        // Assuming you have a valid token for testing
-        let token = match auth::jwt::generate("tomek@el-jot.eu") {
-            Ok(token) => {
-                println!("token: {}", token);
-                token
-            }
-            Err(e) => panic!("Error generating token: {}", e),
-        };
+        let req = actix_web::test::TestRequest::get()
+            .uri("/login_token")
+            .to_request();
+        let resp = actix_web::test::call_service(&app, req).await;
 
-        match auth::jwt::verify(&*token, test_est_conn()) {
-            true => println!("token verified"),
-            false => println!("token not verified"),
-        }
+        assert!(resp.status().is_success())
     }
 }
