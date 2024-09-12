@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: morning-compass
     ports:
-      - "3400:5432"
+      - "5432:5432"
     expose:
       - "5432"
     volumes:
@@ -32,9 +32,7 @@ services:
     environment:
       - MY_LOG_LEVEL=info
       - MY_LOG_STYLE=Always
-      - DATABASE_URL=postgresql://postgres:password@db:5432/morning-compass
-    # command: 'bash -c "/wait-for-it.sh db:5432 -q && diesel migration run && cargo run"'
-    # command: 'diesel migration run && cargo run'
+      - DATABASE_URL=postgresql://postgres:password@0.0.0.1:5432/morning-compass-db
     depends_on:
       - db
     networks:
