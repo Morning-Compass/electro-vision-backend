@@ -1,6 +1,5 @@
-use std::fs::File;
-use actix_web::{HttpResponse, post, web::Json};
 use actix_web::web;
+use actix_web::{post, web::Json, HttpResponse};
 use diesel::prelude::*;
 use diesel::result::DatabaseErrorKind;
 use diesel::result::Error;
@@ -8,11 +7,11 @@ use serde_derive::Deserialize;
 
 use auth::confirmation_token::token::ConfirmationToken;
 
-use crate::{auth, DPool, est_conn, response, ResponseKeys};
 use crate::auth::confirmation_token::token::Cft;
 use crate::models::User;
 use crate::response::JsonResponse;
 use crate::user::NoIdUser;
+use crate::{auth, est_conn, DPool, ResponseKeys};
 
 #[derive(Deserialize, Clone)]
 struct RegisterRequest {
@@ -20,8 +19,6 @@ struct RegisterRequest {
     email: String,
     password: String,
 }
-
-type Register = response::Response<String>;
 
 pub async fn insert_user(new_user: NoIdUser, pool: DPool) -> Result<User, Error> {
     use crate::schema::users::dsl::*;
@@ -47,12 +44,11 @@ pub async fn insert_user(new_user: NoIdUser, pool: DPool) -> Result<User, Error>
             Err(e)
         }
     }
-
 }
 
-pub async fn insert_user_roles(usr_id: i32, pool :DPool) -> Result<String, Error> {
-    use crate::schema::user_roles::dsl::*;
+pub async fn insert_user_roles(usr_id: i32, pool: DPool) -> Result<String, Error> {
     use crate::schema::roles::dsl::{name as role_name, roles};
+    use crate::schema::user_roles::dsl::*;
     let mut conn = est_conn(pool);
 
     let role_id_value: i16 = roles
@@ -61,11 +57,9 @@ pub async fn insert_user_roles(usr_id: i32, pool :DPool) -> Result<String, Error
         .first::<i16>(&mut conn)?;
 
     match diesel::insert_into(user_roles)
-        .values((
-            user_id.eq(usr_id),
-            role_id.eq(role_id_value)
-        ))
-        .execute(&mut conn) {
+        .values((user_id.eq(usr_id), role_id.eq(role_id_value)))
+        .execute(&mut conn)
+    {
         Ok(_) => Ok("User role assigned successfully".to_string()),
         Err(e) => {
             eprintln!("Error inserting user_roles: {:?}", e);
@@ -84,7 +78,11 @@ pub struct RegisterJsonResponse {
 }
 
 #[post("/register")]
-pub async fn register(request: Json<RegisterRequest>, pool: DPool, response_keys: ResponseKeys) -> HttpResponse {
+pub async fn register(
+    request: Json<RegisterRequest>,
+    pool: DPool,
+    response_keys: ResponseKeys,
+) -> HttpResponse {
     let keys = RegisterJsonResponse {
         ok_key: response_keys["register_success"]["key"].to_string(),
         ok_value: response_keys["register_success"]["message"].to_string(),
@@ -107,28 +105,45 @@ pub async fn register(request: Json<RegisterRequest>, pool: DPool, response_keys
 
     match registered_user.await {
         Ok(usr) => {
-            match (insert_user_roles(usr.id, pool.clone()).await, <Cft as ConfirmationToken>::new(request.email.clone(), pool) ) {
-                (Ok(_), Ok(_)) => HttpResponse::Ok().json(JsonResponse::new(keys.ok_key, keys.ok_value)),
+            match (
+                insert_user_roles(usr.id, pool.clone()).await,
+                <Cft as ConfirmationToken>::new(request.email.clone(), pool),
+            ) {
+                (Ok(_), Ok(_)) => {
+                    HttpResponse::Ok().json(JsonResponse::new(keys.ok_key, keys.ok_value))
+                }
                 (Err(e), _) => {
                     eprintln!("Error inserting user roles: {:?}", e);
-                    HttpResponse::InternalServerError().json(JsonResponse::new(keys.err_internal_key, keys.err_internal_value))
-                },
+                    HttpResponse::InternalServerError().json(JsonResponse::new(
+                        keys.err_internal_key,
+                        keys.err_internal_value,
+                    ))
+                }
                 (_, Err(e)) => {
                     eprintln!("Error while creating token: {:?}", e);
-                    HttpResponse::InternalServerError().json(JsonResponse::new(keys.err_internal_key, keys.err_internal_value))
+                    HttpResponse::InternalServerError().json(JsonResponse::new(
+                        keys.err_internal_key,
+                        keys.err_internal_value,
+                    ))
                 }
             }
-        },
+        }
         Err(e) => match e {
             Error::DatabaseError(DatabaseErrorKind::UniqueViolation, info) => {
                 if let Some(existing_email) = info.details() {
                     eprintln!("Email already exists: {}", existing_email);
                 }
-                HttpResponse::BadRequest().json(JsonResponse::new(keys.err_email_exists_key, keys.err_email_exists_value))
+                HttpResponse::BadRequest().json(JsonResponse::new(
+                    keys.err_email_exists_key,
+                    keys.err_email_exists_value,
+                ))
             }
             _ => {
                 eprintln!("Error registering user: {:?}", e);
-                HttpResponse::InternalServerError().json(JsonResponse::new(keys.err_internal_key, keys.err_internal_value))
+                HttpResponse::InternalServerError().json(JsonResponse::new(
+                    keys.err_internal_key,
+                    keys.err_internal_value,
+                ))
             }
         },
     }

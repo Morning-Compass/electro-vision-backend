@@ -41,4 +41,3 @@ pub struct ConfirmationToken {
     pub expires_at: NaiveDateTime,
     pub confirmed_at: Option<NaiveDateTime>,
 }
-

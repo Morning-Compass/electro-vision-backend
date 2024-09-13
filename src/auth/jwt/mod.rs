@@ -1,8 +1,6 @@
-mod generation;
-pub use generation::generate;
 mod claims;
 mod decoding;
-pub use claims::Claims;
-use decoding::jwt_decode as decode;
+mod generation;
 mod verify;
-pub use verify::verify;
+pub use claims::Claims;
+pub use generation::generate;

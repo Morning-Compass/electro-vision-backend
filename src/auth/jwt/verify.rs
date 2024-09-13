@@ -1,20 +1,14 @@
 use std::usize;
 
-use crate::models::User;
-use crate::schema;
-use crate::{constants::JWT_EXPIRATION_TIME, est_conn, schema::users::dsl::*, DPool};
-use chrono::Utc;
-use diesel::r2d2::{ConnectionManager, PooledConnection};
-use diesel::result::Error as DieselError;
+use crate::{constants::JWT_EXPIRATION_TIME, est_conn, DPool};
 use diesel::{
-    query_dsl::methods::FilterDsl, ExpressionMethods, OptionalExtension, PgConnection, RunQueryDsl,
+    query_dsl::methods::{FilterDsl, SelectDsl},
+    result::Error as DieselError,
+    ExpressionMethods, QueryDsl, RunQueryDsl,
 };
 
 fn verify_email(user_email: &str, pool: DPool) -> Result<bool, DieselError> {
-    let exists = users
-        .filter(email.eq(user_email.to_string()))
-        .first::<User>(&mut est_conn(pool))
-        .optional()?;
+    use crate::schema::users::dsl::*;
 
     match exists {
         Some(_) => Ok(true),

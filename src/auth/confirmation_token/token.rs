@@ -1,9 +1,9 @@
 use chrono::{Duration, NaiveDateTime, TimeDelta, Utc};
 use diesel::prelude::OptionalExtension;
 use diesel::query_dsl::methods::FilterDsl;
-use diesel::result::DatabaseErrorKind;
 use diesel::{ExpressionMethods, RunQueryDsl}; // Import this for `optional` method
 
+use crate::auth::{AuthError, VerificationTokenInvalid};
 use crate::schema::users::account_valid;
 use crate::{constants::CONFIRMATION_TOKEN_EXIPIRATION_TIME, est_conn, DPool};
 use crate::{models, schema};
@@ -16,18 +16,18 @@ pub struct Cft {
 }
 
 pub trait ConfirmationToken {
-    fn new(email: String, pool: DPool) -> Result<String, diesel::result::Error>;
-    fn confirm(token: String, pool: DPool) -> Result<String, diesel::result::Error>;
+    fn new(email: String, pool: DPool) -> Result<String, AuthError>;
+    fn confirm(token: String, pool: DPool) -> Result<String, AuthError>;
     fn send(
         token: String,
         username: String,
         email: String,
         pool: DPool,
-    ) -> Result<String, diesel::result::Error>;
+    ) -> Result<String, AuthError>;
 }
 
 impl ConfirmationToken for Cft {
-    fn new(u_email: String, pool: DPool) -> Result<String, diesel::result::Error> {
+    fn new(u_email: String, pool: DPool) -> Result<String, AuthError> {
         use crate::schema::confirmation_tokens::dsl::*;
 
         let ctoken = Cft {
@@ -37,12 +37,7 @@ impl ConfirmationToken for Cft {
             expires_at: Utc::now()
                 .naive_utc()
                 .checked_add_signed(TimeDelta::seconds(CONFIRMATION_TOKEN_EXIPIRATION_TIME))
-                .ok_or_else(|| {
-                    diesel::result::Error::DatabaseError(
-                        diesel::result::DatabaseErrorKind::UnableToSendCommand,
-                        Box::new("Failed to set expiration time".to_string()),
-                    )
-                })?,
+                .ok_or_else(|| AuthError::ServerError(String::from("Failed to check time")))?,
         };
 
         match diesel::insert_into(confirmation_tokens)
@@ -59,24 +54,28 @@ impl ConfirmationToken for Cft {
         }
     }
 
-    fn confirm(_token: String, pool: DPool) -> Result<String, diesel::result::Error> {
+    fn confirm(_token: String, pool: DPool) -> Result<String, AuthError> {
         use crate::schema::confirmation_tokens::dsl::*;
         let mut conn = est_conn(pool);
 
         let db_token = match confirmation_tokens
             .filter(token.eq(&_token))
             .first::<models::ConfirmationToken>(&mut conn)
-            .optional()?
+            .optional()
         {
-            Some(tok) => {
+            Ok(Some(tok)) => {
                 if tok.confirmed_at.is_some() {
-                    return Err(diesel::result::Error::AlreadyInTransaction); // defintelly after auth need to add custom error
+                    return Err(AuthError::VerificationTokenError(
+                        VerificationTokenInvalid::AccountAlreadyVerified,
+                    ));
                 }
                 let current_time = Utc::now().naive_utc();
                 if current_time - Duration::seconds(CONFIRMATION_TOKEN_EXIPIRATION_TIME)
                     > tok.created_at
                 {
-                    Err(diesel::result::Error::NotFound) // Custom error message can be mapped later
+                    Err(AuthError::VerificationTokenError(
+                        VerificationTokenInvalid::Expired,
+                    ))
                 } else {
                     match diesel::update(
                         schema::confirmation_tokens::dsl::confirmation_tokens
@@ -88,15 +87,22 @@ impl ConfirmationToken for Cft {
                         Ok(_) => Ok(tok),
                         Err(e) => {
                             eprintln!("Error updating token verified status: {:?}", e);
-                            Err(diesel::result::Error::DatabaseError(
-                                DatabaseErrorKind::UnableToSendCommand,
-                                Box::new(format!("Error updating token: {}", e)),
-                            ))
+                            Err(AuthError::ServerError(String::from(
+                                "Unable to verify account",
+                            )))
                         }
                     }
                 }
             }
-            None => Err(diesel::result::Error::NotFound),
+            Ok(None) => Err(AuthError::VerificationTokenError(
+                VerificationTokenInvalid::NotFound,
+            )),
+            Err(e) => {
+                eprintln!("Database error while verificating account {:?}", e);
+                Err(AuthError::ServerError(String::from(
+                    "Database Error while account verification",
+                )))
+            }
         };
 
         match db_token {
@@ -109,10 +115,9 @@ impl ConfirmationToken for Cft {
                 .execute(&mut conn)
                 {
                     Ok(_) => Ok("Account verified".to_string()),
-                    Err(e) => Err(diesel::result::Error::DatabaseError(
-                        diesel::result::DatabaseErrorKind::UnableToSendCommand,
-                        Box::new(format!("Error while updating account: {}", e)),
-                    )),
+                    Err(_) => Err(AuthError::ServerError(String::from(
+                        "Error while setting users account verified",
+                    ))),
                 }
             }
             Err(e) => Err(e),
@@ -120,11 +125,11 @@ impl ConfirmationToken for Cft {
     }
 
     fn send(
-        token: String,
-        username: String,
-        u_email: String,
-        pool: DPool,
-    ) -> Result<String, diesel::result::Error> {
+        _token: String,
+        _username: String,
+        _u_email: String,
+        _pool: DPool,
+    ) -> Result<String, AuthError> {
         todo!()
     }
 }
