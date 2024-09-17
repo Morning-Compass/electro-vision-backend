@@ -13,5 +13,4 @@ COPY . .
 RUN apt-get install libpq-dev -y
 RUN cargo install diesel_cli --no-default-features --features postgres
 RUN cargo install cargo-watch
-RUN diesel migration run && cargo run
 RUN USER=root cargo new --bin app

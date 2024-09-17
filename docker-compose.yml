@@ -30,11 +30,12 @@ services:
     expose:
       - "3500"
     environment:
-      - MY_LOG_LEVEL=info
-      - MY_LOG_STYLE=Always
-      - DATABASE_URL=postgresql://postgres:password@0.0.0.1:5432/morning-compass-db
+      MY_LOG_LEVEL: info
+      MY_LOG_STYLE: Always
+      DATABASE_URL: postgresql://postgres:password@db:5432/postgres
     depends_on:
       - db
+    command: "diesel migration run && cargo run"
     networks:
       - morning-compass-network
 
