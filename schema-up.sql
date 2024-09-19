@@ -1,3 +1,12 @@
+-- Drop tables if they exist
+DROP TABLE IF EXISTS user_roles;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS roles;
+DROP TABLE IF EXISTS confirmation_tokens;
+
+-- Recreate the tables in the correct order
+
+-- Create the confirmation_tokens table
 CREATE TABLE confirmation_tokens (
     id SERIAL PRIMARY KEY,
     user_email VARCHAR NOT NULL,
@@ -7,19 +16,13 @@ CREATE TABLE confirmation_tokens (
     confirmed_at TIMESTAMP NULL
 );
 
+-- Create the roles table
 CREATE TABLE roles (
     id SMALLINT PRIMARY KEY,
     name VARCHAR NOT NULL
 );
 
-CREATE TABLE user_roles (
-    user_id INT NOT NULL,
-    role_id SMALLINT NOT NULL,
-    PRIMARY KEY (user_id, role_id),
-    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-    FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE
-);
-
+-- Create the users table
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     username VARCHAR NOT NULL,
@@ -29,6 +32,16 @@ CREATE TABLE users (
     account_valid BOOLEAN NOT NULL
 );
 
-ALTER TABLE user_roles
-ADD CONSTRAINT fk_user_roles_users FOREIGN KEY (user_id) REFERENCES users (id),
-ADD CONSTRAINT fk_user_roles_roles FOREIGN KEY (role_id) REFERENCES roles (id);
+-- Create the user_roles table (with foreign key references to users and roles)
+CREATE TABLE user_roles (
+    user_id INT NOT NULL,
+    role_id SMALLINT NOT NULL,
+    PRIMARY KEY (user_id, role_id),
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE
+);
+
+-- Add the constraints to the user_roles table (this step is redundant as the constraints were added during table creation)
+--ALTER TABLE user_roles
+--ADD CONSTRAINT fk_user_roles_users FOREIGN KEY (user_id) REFERENCES users (id),
+--ADD CONSTRAINT fk_user_roles_roles FOREIGN KEY (role_id) REFERENCES roles (id);
