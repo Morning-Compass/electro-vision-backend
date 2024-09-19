@@ -2,8 +2,8 @@ FROM rust:1.81-slim-bullseye
 
 RUN apt-get update -y && \
     apt-get upgrade -y
-    # apt-get install -y default-mysql-client
-    # apt-get install -y mariadb-client
+# apt-get install -y default-mysql-client
+# apt-get install -y mariadb-client
 
 ENV CARGO_TARGET_DIR=/tmp/target
 WORKDIR /app
