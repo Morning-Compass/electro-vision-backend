@@ -35,7 +35,8 @@ services:
       DATABASE_URL: postgresql://postgres:password@db:5432/postgres
     depends_on:
       - db
-    command: bash -c "cargo run && diesel setup && diesel migration generate users && chmod +x migration-script.sh && ./migration-script.sh && diesel migration run && diesel migration redo"
+    command: >
+      bash -c "diesel setup; diesel migration generate users; chmod +x migration-script.sh; sh ./migration-script.sh; diesel migration run; diesel migration redo; cargo run"
     networks:
       - morning-compass-network
 
