@@ -2,9 +2,7 @@
 mod tests {
     use core::panic;
 
-    use jsonwebtoken::TokenData;
-
-    use crate::auth::{self, jwt::{jwt_decode, Claims}};
+    use crate::auth::{self, jwt::jwt_decode};
 
     const TEST_EMAIL: &str = "tomek@el-jot.eu";
 
@@ -18,15 +16,14 @@ mod tests {
         }
     }
 
-    fn decode() -> Result<TokenData<Claims>, jsonwebtoken::errors::Error> {
+    #[test]
+    fn decode() {
         match jwt_decode(generate_token()) {
             Ok(claims) => {
                 println!("Decoded claims: {:?}", claims.claims);
-                Ok(claims)
-            },
+            }
             Err(e) => {
-                println!("Failed to decode token: {:?}", e);
-                Err(e)
+                panic!("Failed to decode token: {:?}", e);
             }
         }
     }
