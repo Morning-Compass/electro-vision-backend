@@ -36,7 +36,7 @@ struct ResponseUser {
 }
 
 impl UserWithRoles {
-    fn new(user: User, roles: Vec<String>) -> Self {
+    pub fn new(user: User, roles: Vec<String>) -> Self {
         Self {
             id: user.id,
             username: user.username,

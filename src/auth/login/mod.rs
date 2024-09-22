@@ -1,2 +1,2 @@
-pub mod tests;
+mod test;
 pub mod login;
