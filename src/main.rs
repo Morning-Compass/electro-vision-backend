@@ -5,10 +5,7 @@ mod response;
 mod schema;
 mod user;
 
-use std::env;
-use std::fs::File;
-use std::io::Read;
-
+use crate::auth::login::login::{login_email, login_username};
 use crate::constants::CONNECTION_POOL_ERROR;
 use actix_web::web::Data;
 use actix_web::{middleware, App, HttpServer};
@@ -17,6 +14,9 @@ use diesel::{
     PgConnection,
 };
 use dotenv::dotenv;
+use std::env;
+use std::fs::File;
+use std::io::Read;
 
 type DBPool = Pool<ConnectionManager<PgConnection>>;
 pub type DBPConn = PooledConnection<ConnectionManager<PgConnection>>;
@@ -51,8 +51,8 @@ async fn main() -> std::io::Result<()> {
             .wrap(middleware::Logger::default())
             .service(user::list)
             .service(auth::register::register)
-            .service(auth::login::login_username)
-            .service(auth::login::login_email)
+            .service(login_email)
+            .service(login_username)
             .service(auth::validate_account::validate_account)
     })
     .bind("127.0.0.1:3500")?
