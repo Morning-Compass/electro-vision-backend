@@ -32,7 +32,7 @@ services:
     environment:
       MY_LOG_LEVEL: info
       MY_LOG_STYLE: Always
-      DATABASE_URL: postgresql://postgres:password@db:5432/postgres
+      DATABASE_URL: postgresql://postgres:password@db:5432/morning-compass
     depends_on:
       - db
     command: >
