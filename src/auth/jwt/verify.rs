@@ -1,18 +1,16 @@
 use crate::{constants::JWT_EXPIRATION_TIME, est_conn, DPool};
 use chrono::Utc;
 use diesel::RunQueryDsl;
-use diesel::{
-    query_dsl::methods::FilterDsl,
-    result::Error as DieselError,
-    ExpressionMethods,
-};
+use diesel::{query_dsl::methods::FilterDsl, result::Error as DieselError, ExpressionMethods};
 use std::usize;
 
 fn verify_email(users_email: String, pool: DPool) -> Result<bool, DieselError> {
     use crate::schema::users::dsl::*;
 
-    let exists = diesel::select(diesel::dsl::exists(users.filter(email.eq(users_email))))
-        .get_result(&mut est_conn(pool.clone()));
+    let conn = &mut est_conn(pool.clone());
+
+    let exists =
+        diesel::select(diesel::dsl::exists(users.filter(email.eq(users_email)))).get_result(conn);
 
     match exists {
         Ok(true) => Ok(true),
@@ -30,11 +28,12 @@ fn verify_date(iat: usize, exp: usize) -> bool {
     }
     true
 }
-
+// need to add date and time verification
 pub fn verify(token: &str, pool: DPool) -> bool {
     match super::jwt_decode(token.to_string()) {
         Ok(token) => {
             if !verify_date(token.claims.iat, token.claims.exp) {
+                println!("token has expired");
                 return false;
             }
 

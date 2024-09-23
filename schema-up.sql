@@ -1,8 +1,4 @@
--- Drop tables if they exist
-DROP TABLE IF EXISTS user_roles;
-DROP TABLE IF EXISTS users;
-DROP TABLE IF EXISTS roles;
-DROP TABLE IF EXISTS confirmation_tokens;
+
 
 -- Recreate the tables in the correct order
 
