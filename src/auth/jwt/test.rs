@@ -1,4 +1,3 @@
-#[cfg(test)]
 mod tests {
     use diesel::{
         r2d2::{self, ConnectionManager},
