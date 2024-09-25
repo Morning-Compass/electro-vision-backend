@@ -40,6 +40,8 @@ impl ConfirmationToken for Cft {
                 .ok_or_else(|| AuthError::ServerError(String::from("Failed to check time")))?,
         };
 
+        let token_to_return = ctoken.token.clone();
+
         match diesel::insert_into(confirmation_tokens)
             .values((
                 user_email.eq(ctoken.user_email),
@@ -49,7 +51,7 @@ impl ConfirmationToken for Cft {
             ))
             .execute(&mut est_conn(pool))
         {
-            Ok(_) => Ok("Token inserted successfully".to_string()),
+            Ok(_) => Ok(token_to_return),
             Err(_) => Ok("Error inserting token".to_string()),
         }
     }
