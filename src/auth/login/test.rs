@@ -52,11 +52,24 @@ mod tests {
         }
     }
     async fn user_email(pool: DPool) -> impl actix_web::Responder {
-        const email = "tomek@el-jot.eu";
+        let email: &str = "tomek@el-jot.eu";
         let user_data = auth::login::login::list_user(
-            auth::login::login::LoginMethodIdentifier::Email(email),
+            auth::login::login::LoginMethodIdentifier::Email(email.to_string()),
             pool.clone(),
         );
+        match user_data.await {
+            Ok(user) => {
+                println!("User data: {:?}", user);
+                actix_web::HttpResponse::Ok().json(json!({
+                    "message": "user",
+                    "user": user,
+                }))
+            },
+            Err(e) => actix_web::HttpResponse::InternalServerError().json(json!({
+                "error": "error while listing user by email",
+                "details": e.to_string(),
+            }))
+        }
     }
     #[actix_web::test]
     async fn login_with_roles() {
@@ -79,7 +92,7 @@ mod tests {
                     actix_web::web::get().to(login_with_roles_helper_username),
                 )
                 .route(
-                    "/user/jakubkulik20@gmail.com",
+                    "/change-password",
                     actix_web::web::get().to(user_email),
                 ),
         )
