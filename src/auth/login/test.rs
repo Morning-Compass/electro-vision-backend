@@ -1,7 +1,8 @@
 #[cfg(test)]
 mod tests {
     use std::env;
-
+    use actix::dev::Request;
+    use actix_web::web::{route, Path};
     use diesel::r2d2::{self, ConnectionManager};
     use diesel::PgConnection;
     use dotenv::dotenv;
@@ -37,15 +38,25 @@ mod tests {
         );
 
         match user_data.await {
-            Ok(user) => actix_web::HttpResponse::Ok().json(json!({
-                "message": "user",
-                "user": user
-            })),
+            Ok(user) => {
+                println!("User data: {:?}", user);
+                actix_web::HttpResponse::Ok().json(json!({
+                    "message": "user",
+                    "user": user,
+                }))
+            },
             Err(e) => actix_web::HttpResponse::InternalServerError().json(json!({
                 "error": "error while listing user by email",
-                "details": e.to_string()
-            })),
+                "details": e.to_string(),
+            }))
         }
+    }
+    async fn user_email(pool: DPool) -> impl actix_web::Responder {
+        const email = "tomek@el-jot.eu";
+        let user_data = auth::login::login::list_user(
+            auth::login::login::LoginMethodIdentifier::Email(email),
+            pool.clone(),
+        );
     }
     #[actix_web::test]
     async fn login_with_roles() {
@@ -66,6 +77,10 @@ mod tests {
                 .route(
                     "/login_with_roles_username",
                     actix_web::web::get().to(login_with_roles_helper_username),
+                )
+                .route(
+                    "/user/jakubkulik20@gmail.com",
+                    actix_web::web::get().to(user_email),
                 ),
         )
         .await;

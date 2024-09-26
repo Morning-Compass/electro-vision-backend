@@ -1,3 +1,2 @@
-pub mod login;
-#[cfg(test)]
 mod test;
+pub mod login;

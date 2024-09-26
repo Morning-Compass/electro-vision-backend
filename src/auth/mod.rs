@@ -6,3 +6,4 @@ pub mod jwt;
 pub mod login;
 pub mod register;
 pub mod validate_account;
+pub mod find_user;

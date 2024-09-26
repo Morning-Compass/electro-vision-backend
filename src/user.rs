@@ -1,12 +1,15 @@
 use crate::models::User;
+use serde::Deserialize;
 use crate::response::Response;
 use crate::{constants::APPLICATION_JSON, models};
 use actix_web::{
     get,
     web::{self},
     HttpResponse,
+    web::Json,
 };
 use chrono::{NaiveDateTime, Utc};
+use diesel::deserialize;
 use diesel::{prelude::*, result::Error};
 
 use crate::{est_conn, DPool};
@@ -19,6 +22,11 @@ pub struct NoIdUser {
     pub password: String,
     pub created_at: NaiveDateTime,
     pub account_valid: bool,
+}
+
+#[derive(Deserialize)]
+pub struct UserEmail {
+    pub email: String,
 }
 
 impl models::User {
@@ -70,4 +78,11 @@ pub async fn list(pool: DPool) -> HttpResponse {
             HttpResponse::InternalServerError().finish()
         }
     }
+}
+
+
+#[get("/change-password")]
+pub async fn change_password(request: Json<UserEmail>, pool: DPool) -> HttpResponse {
+    println!("Email {:?}", &request.email);
+    return HttpResponse::Accepted().finish();
 }
