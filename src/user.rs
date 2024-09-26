@@ -80,7 +80,6 @@ pub async fn list(pool: DPool) -> HttpResponse {
     }
 }
 
-
 #[get("/change-password")]
 pub async fn change_password(request: Json<UserEmail>, pool: DPool) -> HttpResponse {
     println!("Email {:?}", &request.email);

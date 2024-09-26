@@ -51,7 +51,7 @@ mod tests {
             }))
         }
     }
-    async fn user_email(pool: DPool) -> impl actix_web::Responder {
+    async fn change_password(pool: DPool) -> impl actix_web::Responder {
         let email: &str = "tomek@el-jot.eu";
         let user_data = auth::login::login::list_user(
             auth::login::login::LoginMethodIdentifier::Email(email.to_string()),
@@ -93,7 +93,7 @@ mod tests {
                 )
                 .route(
                     "/change-password",
-                    actix_web::web::get().to(user_email),
+                    actix_web::web::get().to(change_password)),
                 ),
         )
         .await;

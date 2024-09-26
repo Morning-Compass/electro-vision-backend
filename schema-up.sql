@@ -37,6 +37,7 @@ CREATE TABLE user_roles (
     FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE
 );
 
+INSERT INTO users (username, email, password, created_at, account_valid) VALUES ('tester', 'tomek@el-jot.eu', 'qazxsw2.', NOW(), true);
 -- Add the constraints to the user_roles table (this step is redundant as the constraints were added during table creation)
 --ALTER TABLE user_roles
 --ADD CONSTRAINT fk_user_roles_users FOREIGN KEY (user_id) REFERENCES users (id),
