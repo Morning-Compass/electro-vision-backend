@@ -8,6 +8,7 @@ mod tests {
     use dotenv::dotenv;
     use serde_json::json;
 
+    use crate::auth::find_user::{Find, FindData};
     use crate::{auth, DPool};
 
     async fn login_with_roles_helper_email(pool: DPool) -> impl actix_web::Responder {
@@ -53,22 +54,28 @@ mod tests {
     }
     async fn change_password(pool: DPool) -> impl actix_web::Responder {
         let email: &str = "tomek@el-jot.eu";
-        let user_data = auth::login::login::list_user(
-            auth::login::login::LoginMethodIdentifier::Email(email.to_string()),
-            pool.clone(),
-        );
-        match user_data.await {
-            Ok(user) => {
-                println!("User data: {:?}", user);
-                actix_web::HttpResponse::Ok().json(json!({
-                    "message": "user",
-                    "user": user,
-                }))
+
+        let is_found = FindData::find_by_email(email.to_string(), pool).await;
+        match is_found {
+            Ok(found) => {
+                if found {
+                    actix_web::HttpResponse::Ok().json(json!({
+                        "message": "found the user",
+                        "user": found,
+                    }))
+                }
+                else {
+                    actix_web::HttpResponse::Ok().json(json!({
+                        "message": "Did not find the user",
+                        "user": found,
+                    }))
+                }
+
             },
             Err(e) => actix_web::HttpResponse::InternalServerError().json(json!({
-                "error": "error while listing user by email",
+                "error": "error while changing password",
                 "details": e.to_string(),
-            }))
+            })),
         }
     }
     #[actix_web::test]
@@ -93,13 +100,13 @@ mod tests {
                 )
                 .route(
                     "/change-password",
-                    actix_web::web::get().to(change_password)),
+                    actix_web::web::get().to(change_password)
                 ),
         )
         .await;
 
         let req = actix_web::test::TestRequest::get()
-            .uri("/login_with_roles_email")
+            .uri("/change-password")
             .to_request();
         let resp = actix_web::test::call_service(&app, req).await;
 
