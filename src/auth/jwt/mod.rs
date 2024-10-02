@@ -6,5 +6,4 @@ pub use claims::Claims;
 pub use decoding::jwt_decode;
 pub use generation::generate;
 pub use verify::verify;
-#[cfg(test)]
-mod test;
+pub mod test;
