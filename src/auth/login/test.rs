@@ -1,14 +1,16 @@
 #[cfg(test)]
 mod tests {
-    use std::env;
     use actix::dev::Request;
-    use actix_web::web::{route, Path};
+    use actix_web::web::{route, Json, Path};
     use diesel::r2d2::{self, ConnectionManager};
     use diesel::PgConnection;
     use dotenv::dotenv;
     use serde_json::json;
+    use std::env;
 
     use crate::auth::find_user::{Find, FindData};
+    use crate::constants::{TEST_EMAIL, TEST_PASSWORD, TEST_USERNAME};
+    use crate::response::JsonResponse;
     use crate::{auth, DPool};
 
     async fn login_with_roles_helper_email(pool: DPool) -> impl actix_web::Responder {
@@ -45,38 +47,25 @@ mod tests {
                     "message": "user",
                     "user": user,
                 }))
-            },
+            }
             Err(e) => actix_web::HttpResponse::InternalServerError().json(json!({
                 "error": "error while listing user by email",
                 "details": e.to_string(),
-            }))
-        }
-    }
-    async fn change_password(pool: DPool) -> impl actix_web::Responder {
-        let email: &str = "tomek@el-jot.eu";
-
-        let is_found = FindData::find_by_email(email.to_string(), pool).await;
-        match is_found {
-            Ok(found) => {
-                if found {
-                    actix_web::HttpResponse::Ok().json(json!({
-                        "message": "found the user",
-                        "user": found,
-                    }))
-                }
-                else {
-                    actix_web::HttpResponse::Ok().json(json!({
-                        "message": "Did not find the user",
-                        "user": found,
-                    }))
-                }
-
-            },
-            Err(e) => actix_web::HttpResponse::InternalServerError().json(json!({
-                "error": "error while changing password",
-                "details": e.to_string(),
             })),
         }
+    }
+    async fn change_password_test(pool: DPool) -> impl actix_web::Responder {
+        use crate::user::*;
+        let response = change_password(
+            Json(UserChangePassword {
+                email: TEST_EMAIL.to_string(),
+                password: TEST_PASSWORD.to_string(),
+            }),
+            pool,
+        )
+        .await;
+        println!("Change_password_test {:?}", response);
+        actix_web::HttpResponse::Ok()
     }
     #[actix_web::test]
     async fn login_with_roles() {
@@ -100,7 +89,7 @@ mod tests {
                 )
                 .route(
                     "/change-password",
-                    actix_web::web::get().to(change_password)
+                    actix_web::web::get().to(change_password_test),
                 ),
         )
         .await;

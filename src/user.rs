@@ -1,16 +1,17 @@
+use crate::auth::find_user::{Find, FindData};
 use crate::models::User;
-use serde::Deserialize;
 use crate::response::Response;
 use crate::{constants::APPLICATION_JSON, models};
 use actix_web::{
     get,
+    web::Json,
     web::{self},
     HttpResponse,
-    web::Json,
 };
 use chrono::{NaiveDateTime, Utc};
 use diesel::deserialize;
 use diesel::{prelude::*, result::Error};
+use serde::Deserialize;
 
 use crate::{est_conn, DPool};
 
@@ -27,6 +28,12 @@ pub struct NoIdUser {
 #[derive(Deserialize)]
 pub struct UserEmail {
     pub email: String,
+}
+
+#[derive(Deserialize)]
+pub struct UserChangePassword {
+    pub email: String,
+    pub password: String,
 }
 
 impl models::User {
@@ -81,8 +88,10 @@ pub async fn list(pool: DPool) -> HttpResponse {
 }
 
 #[get("/change-password")]
-pub async fn change_password(request: Json<UserEmail>, pool: DPool) -> HttpResponse {
-    println!("Email {:?}", &request.email);
+pub async fn change_password(request: Json<UserChangePassword>, pool: DPool) -> HttpResponse {
+    let user = FindData::find_by_email(request.email.clone(), pool).await;
+    let user_data = user.unwrap();
+    println!("User data: {:?}", user_data);
 
     return HttpResponse::Accepted().finish();
 }
