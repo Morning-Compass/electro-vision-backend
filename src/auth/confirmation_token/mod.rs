@@ -1,3 +1,2 @@
-#[cfg(test)]
-mod test;
+pub mod test;
 pub mod token;

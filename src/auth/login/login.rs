@@ -74,7 +74,10 @@ pub struct RequestLoginEmail {
     password: String,
 }
 
-pub async fn list_user(identifier: LoginMethodIdentifier, pool: DPool) -> Result<UserWithRoles, Error> {
+pub async fn list_user(
+    identifier: LoginMethodIdentifier,
+    pool: DPool,
+) -> Result<UserWithRoles, Error> {
     use crate::schema::users::dsl::*;
 
     let user_result = match identifier {
@@ -168,4 +171,3 @@ pub async fn login_email(request: Json<RequestLoginEmail>, pool: DPool) -> HttpR
         }
     }
 }
-
