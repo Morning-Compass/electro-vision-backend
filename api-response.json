@@ -12,12 +12,12 @@
   "register_success": {
     "key": "register_success",
     "message": "User registered successfully",
-    "status": "502"
+    "status": "200"
   },
   "account_validation_success": {
     "key": "validation_success",
     "message": "Account validated successfully",
-    "status": "502"
+    "status": "200"
   },
   "account_validation_server_error": {
     "key": "validation_server_error",
@@ -27,7 +27,7 @@
   "account_validation_token_invalid": {
     "key": "validation_error",
     "message": "Token invalid",
-    "status": "502"
+    "status": "498"
   },
   "email_resend_success": {
     "message": "Email sent successfully",
@@ -41,7 +41,7 @@
   "login_username_client_error": {
     "key": "login_error",
     "message": "Incorrect credentials",
-    "status": "502"
+    "status": "401"
   },
   "login_username_server_error": {
     "key": "login__server_error",
