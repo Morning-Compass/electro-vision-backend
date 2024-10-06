@@ -3,7 +3,7 @@ use crate::models::User;
 use crate::response::Response;
 use crate::{constants::APPLICATION_JSON, models};
 use actix_web::{
-    get,
+    get, put,
     web::Json,
     web::{self},
     HttpResponse,
@@ -87,7 +87,7 @@ pub async fn list(pool: DPool) -> HttpResponse {
     }
 }
 
-#[get("/change-password")]
+#[put("/change-password")]
 pub async fn change_password(request: Json<UserChangePassword>, pool: DPool) -> HttpResponse {
     let user = FindData::find_by_email(request.email.clone(), pool).await;
     let user_data = user.unwrap();

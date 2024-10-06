@@ -1,5 +1,6 @@
 use crate::auth::find_user::{Find, FindData};
 use crate::{auth, DPool};
+use serde_json::json;
 
 pub async fn login_with_roles_helper_email(pool: DPool) -> impl actix_web::Responder {
     let user_email = "tomek@el-jot.eu";
@@ -45,20 +46,14 @@ pub async fn login_with_roles_helper_username(pool: DPool) -> impl actix_web::Re
 pub async fn change_password(pool: DPool) -> impl actix_web::Responder {
     let email: &str = "tomek@el-jot.eu";
 
-    let is_found = FindData::find_by_email(email.to_string(), pool).await;
-    match is_found {
-        Ok(found) => {
-            if found {
-                actix_web::HttpResponse::Ok().json(json!({
-                    "message": "found the user",
-                    "user": found,
-                }))
-            } else {
-                actix_web::HttpResponse::Ok().json(json!({
-                    "message": "Did not find the user",
-                    "user": found,
-                }))
-            }
+    let user_data = FindData::find_by_email(email.to_string(), pool).await;
+    match user_data {
+        Ok(user) => {
+            println!("\n USER DATA: \n{:?}", user);
+            actix_web::HttpResponse::Ok().json(json!({
+                "message": "found the user",
+                "user": user,
+            }))
         }
         Err(e) => actix_web::HttpResponse::InternalServerError().json(json!({
             "error": "error while changing password",

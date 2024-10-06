@@ -114,7 +114,10 @@ mod test {
     use dotenvy::dotenv;
 
     use crate::{
-        auth::{confirmation_token, jwt, login},
+        auth::{
+            confirmation_token, jwt,
+            login::{self, test::change_password},
+        },
         DPool,
     };
 
@@ -180,7 +183,7 @@ mod test {
                 )
                 .route(
                     "/login_change_password_helper",
-                    actix_web::web::to(login_change_password_helper),
+                    actix_web::web::put().to(login_change_password_helper),
                 )
                 .route(
                     "/confirmation_token_create",
