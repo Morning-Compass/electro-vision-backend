@@ -1,4 +1,7 @@
-
+DROP TABLE IF EXISTS user_roles;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS roles;
+DROP TABLE IF EXISTS confirmation_tokens;
 
 -- Recreate the tables in the correct order
 
@@ -22,7 +25,7 @@ CREATE TABLE roles (
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     username VARCHAR NOT NULL,
-    email VARCHAR NOT NULL,
+    email VARCHAR NOT NULL UNIQUE,
     password VARCHAR NOT NULL,
     created_at TIMESTAMP NOT NULL,
     account_valid BOOLEAN NOT NULL
