@@ -8,7 +8,7 @@ use serde_derive::Deserialize;
 use auth::confirmation_token::token::ConfirmationToken;
 
 use crate::auth::confirmation_token::token::Cft;
-use crate::models::User;
+use crate::models::{ConfirmationToken, User};
 use crate::response::JsonResponse;
 use crate::user::NoIdUser;
 use crate::{auth, est_conn, DPool, ResponseKeys};
@@ -107,9 +107,16 @@ pub async fn register(
         Ok(usr) => {
             match (
                 insert_user_roles(usr.id, pool.clone()).await,
-                <Cft as ConfirmationToken>::new(request.email.clone(), pool),
+                <Cft as ConfirmationToken>::new(request.email.clone(), pool.clone()),
             ) {
                 (Ok(_), Ok(_)) => {
+                    ConfirmationToken::send(
+                        ConfirmationToken::new(usr.email, pool.clone()),
+                        usr.username,
+                        usr.email,
+                        pool.clone(),
+                        TokenEmailType::AccountVerificate,
+                    );
                     HttpResponse::Ok().json(JsonResponse::new(keys.ok_key, keys.ok_value))
                 }
                 (Err(e), _) => {

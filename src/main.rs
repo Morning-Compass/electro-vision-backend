@@ -1,5 +1,6 @@
 mod auth;
 mod constants;
+mod emails;
 mod models;
 mod response;
 mod schema;
