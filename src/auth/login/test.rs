@@ -15,7 +15,7 @@ mod tests {
         DBPool, DPool,
     };
     use serde_json::json;
-    use std::env;
+    use std::{borrow::Borrow, env};
 
     use actix_web::{test, web, App};
     use std::str;
@@ -67,16 +67,19 @@ mod tests {
         let user_data = FindData::find_by_email(email.to_string(), pool).await;
         match user_data {
             Ok(user) => {
-                println!("\n USER DATA: \n{:?}", user);
+                // println!("\n USER DATA: \n{:?}", user);
                 actix_web::HttpResponse::Ok().json(json!({
                     "message": "found the user",
                     "user": user,
                 }))
             }
-            Err(e) => actix_web::HttpResponse::InternalServerError().json(json!({
-                "error": "error while changing password",
-                "details": e.to_string(),
-            })),
+            Err(e) => {
+                // println!("\n FAILED ERROR change password helper");
+                actix_web::HttpResponse::InternalServerError().json(json!({
+                    "error": "error while changing password",
+                    "details": e.to_string(),
+                }))
+            }
         }
     }
 
@@ -161,6 +164,8 @@ mod tests {
         assert!(resp.status().is_success(), "Password change request failed");
 
         let body = test::read_body(resp).await;
+        println!("code: 23123123123123131231\n{:?}\n", body);
+
         let body_str = str::from_utf8(&body).expect("Failed to convert body to string");
         assert!(
             body_str.contains(r#""message":"found the user""#),

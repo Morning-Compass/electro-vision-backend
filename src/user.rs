@@ -91,7 +91,8 @@ pub async fn list(pool: DPool) -> HttpResponse {
 pub async fn change_password(request: Json<UserChangePassword>, pool: DPool) -> HttpResponse {
     let user = FindData::find_by_email(request.email.clone(), pool).await;
     let user_data = user.unwrap();
-    println!("User data: {:?}", user_data);
+    let user_password = user_data.password;
+    println!("\n\n\n\n\nUser password: {:?}", user_password);
 
     return HttpResponse::Accepted().finish();
 }
