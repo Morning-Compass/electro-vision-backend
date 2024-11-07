@@ -1,4 +1,5 @@
 use crate::auth::find_user::{Find, FindData};
+use crate::auth::hash_password::Hash;
 use crate::models::User;
 use crate::response::Response;
 use crate::{constants::APPLICATION_JSON, models};
@@ -89,10 +90,11 @@ pub async fn list(pool: DPool) -> HttpResponse {
 
 #[put("/change-password")]
 pub async fn change_password(request: Json<UserChangePassword>, pool: DPool) -> HttpResponse {
+    use crate::auth::hash_password::HashPassword;
     let user = FindData::find_by_email(request.email.clone(), pool).await;
-    let user_data = user.unwrap();
-    let user_password = user_data.password;
-    println!("\n\n\n\n\nUser password: {:?}", user_password);
+    let mut user_data = user.unwrap();
+    user_data.password = HashPassword::hash_password(request.password.to_string()).await;
+    println!("\n\n\n\n\nUser password: {:?}", user_data.password);
 
-    return HttpResponse::BadRequest().finish();
+    return HttpResponse::Ok().finish();
 }
