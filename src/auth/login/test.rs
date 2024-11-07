@@ -6,17 +6,20 @@ mod tests {
         PgConnection,
     };
     use dotenv::dotenv;
+    use serde::Serialize;
 
     use crate::{
         auth::{
             self,
             find_user::{Find, FindData},
         },
+        models::User,
         DBPool, DPool,
     };
     use serde_json::json;
     use std::{borrow::Borrow, env};
 
+    use crate::user::UserChangePassword;
     use actix_web::{test, web, App};
     use std::str;
 
@@ -61,25 +64,28 @@ mod tests {
         }
     }
 
-    pub async fn change_password_helper(pool: DPool) -> impl actix_web::Responder {
-        let email: &str = "tomek@el-jot.eu";
+    pub async fn change_password_helper(
+        pool: DPool,
+        data: web::Json<UserChangePassword>,
+    ) -> impl actix_web::Responder {
+        println!(
+            "Data - password: {:?}, email: {:?}",
+            data.password, data.email
+        );
 
-        let user_data = FindData::find_by_email(email.to_string(), pool).await;
+        let user_data = FindData::find_by_email(data.email.to_string(), pool).await;
         match user_data {
-            Ok(user) => {
-                // println!("\n USER DATA: \n{:?}", user);
+            Ok(mut user) => {
+                user.password = data.password.to_string();
                 actix_web::HttpResponse::Ok().json(json!({
-                    "message": "found the user",
+                    "message": "user password changed",
                     "user": user,
                 }))
             }
-            Err(e) => {
-                // println!("\n FAILED ERROR change password helper");
-                actix_web::HttpResponse::InternalServerError().json(json!({
-                    "error": "error while changing password",
-                    "details": e.to_string(),
-                }))
-            }
+            Err(e) => actix_web::HttpResponse::InternalServerError().json(json!({
+                "error": "error while changing user password",
+                "details": e.to_string(),
+            })),
         }
     }
 
@@ -147,16 +153,22 @@ mod tests {
 
     #[actix_web::test]
     async fn test_change_password() {
+        let req_data = UserChangePassword {
+            email: "tomek@el-jot.eu".to_string(),
+            password: "123".to_string(),
+        };
+
         let pool = setup_pool();
         let app = test::init_service(
             App::new()
                 .app_data(web::Data::new(pool.clone()))
-                .route("/change_password", web::put().to(change_password_helper)),
+                .route("/change-password", web::put().to(change_password_helper)),
         )
         .await;
 
         let req = test::TestRequest::put()
-            .uri("/change_password")
+            .uri("/change-password")
+            .set_json(req_data)
             .to_request();
 
         let resp = test::call_service(&app, req).await;
@@ -168,7 +180,7 @@ mod tests {
 
         let body_str = str::from_utf8(&body).expect("Failed to convert body to string");
         assert!(
-            body_str.contains(r#""message":"found the user""#),
+            body_str.contains(r#""user password changed""#),
             "Unexpected response body: {:?}",
             body_str
         );

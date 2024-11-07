@@ -11,7 +11,7 @@ use actix_web::{
 use chrono::{NaiveDateTime, Utc};
 use diesel::deserialize;
 use diesel::{prelude::*, result::Error};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{est_conn, DPool};
 
@@ -30,7 +30,7 @@ pub struct UserEmail {
     pub email: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct UserChangePassword {
     pub email: String,
     pub password: String,
@@ -94,5 +94,5 @@ pub async fn change_password(request: Json<UserChangePassword>, pool: DPool) -> 
     let user_password = user_data.password;
     println!("\n\n\n\n\nUser password: {:?}", user_password);
 
-    return HttpResponse::Accepted().finish();
+    return HttpResponse::BadRequest().finish();
 }

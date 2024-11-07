@@ -42,7 +42,7 @@ impl Find for FindData {
             .first(conn);
         match user_data {
             Ok(user) => {
-                println!("User data was found find_user.rs {:?}", user);
+                // println!("User data was found find_user.rs {:?}", user);
                 Ok(user)
             }
             Err(e) => Err(e),
