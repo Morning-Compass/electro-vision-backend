@@ -12,6 +12,7 @@ mod tests {
         auth::{
             self,
             find_user::{Find, FindData},
+            hash_password::Hash,
         },
         models::User,
         DBPool, DPool,
@@ -153,9 +154,10 @@ mod tests {
 
     #[actix_web::test]
     async fn test_change_password() {
+        use crate::auth::hash_password::HashPassword;
         let req_data = UserChangePassword {
             email: "tomek@el-jot.eu".to_string(),
-            password: "123".to_string(),
+            password: HashPassword::hash_password("123".to_string()).await,
         };
 
         let pool = setup_pool();

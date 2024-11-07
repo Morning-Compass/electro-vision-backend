@@ -3,6 +3,7 @@ pub use auth_error::AuthError;
 pub use auth_error::VerificationTokenInvalid;
 pub mod confirmation_token;
 pub mod find_user;
+pub mod hash_password;
 pub mod jwt;
 pub mod login;
 pub mod register;
