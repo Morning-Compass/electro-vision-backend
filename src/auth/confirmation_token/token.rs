@@ -1,16 +1,14 @@
 use std::env;
 
-use actix_web::web::to;
 use chrono::{Duration, NaiveDateTime, TimeDelta, Utc};
 use diesel::prelude::OptionalExtension;
 use diesel::query_dsl::methods::FilterDsl;
 use diesel::{ExpressionMethods, RunQueryDsl};
 use dotenvy::dotenv;
 use lettre::transport::smtp::authentication::Credentials;
-use lettre::transport::smtp::commands::Auth;
-use lettre::Transport; // Import this for `optional` method
+use lettre::Transport;
 
-use crate::auth::{AuthError, VerificationTokenInvalid};
+use crate::auth::auth_error::{VerificationTokenError, VerificationTokenServerError};
 use crate::emails::{email_body_generator, EmailType};
 use crate::schema::users::account_valid;
 use crate::{constants::CONFIRMATION_TOKEN_EXIPIRATION_TIME, est_conn, DPool};
@@ -29,19 +27,19 @@ pub struct Cft {
 }
 
 pub trait ConfirmationToken {
-    fn new(email: String, pool: DPool) -> Result<String, AuthError>;
-    fn confirm(token: String, pool: DPool) -> Result<String, AuthError>;
+    fn new(email: String, pool: DPool) -> Result<String, VerificationTokenError>;
+    fn confirm(token: String, pool: DPool) -> Result<String, VerificationTokenError>;
     async fn send(
-        token: String,
         username: String,
         email: String,
         pool: DPool,
         email_type: TokenEmailType,
-    ) -> Result<String, AuthError>;
+        token: Option<String>,
+    ) -> Result<String, VerificationTokenError>;
 }
 
 impl ConfirmationToken for Cft {
-    fn new(u_email: String, pool: DPool) -> Result<String, AuthError> {
+    fn new(u_email: String, pool: DPool) -> Result<String, VerificationTokenError> {
         use crate::schema::confirmation_tokens::dsl::*;
 
         let ctoken = Cft {
@@ -51,7 +49,11 @@ impl ConfirmationToken for Cft {
             expires_at: Utc::now()
                 .naive_utc()
                 .checked_add_signed(TimeDelta::seconds(CONFIRMATION_TOKEN_EXIPIRATION_TIME))
-                .ok_or_else(|| AuthError::ServerError(String::from("Failed to check time")))?,
+                .ok_or_else(|| {
+                    VerificationTokenError::ServerError(
+                        VerificationTokenServerError::SettingExpirationDateError,
+                    )
+                })?,
         };
 
         let token_to_return = ctoken.token.clone();
@@ -66,11 +68,13 @@ impl ConfirmationToken for Cft {
             .execute(&mut est_conn(pool))
         {
             Ok(_) => Ok(token_to_return),
-            Err(_) => Ok("Error inserting token".to_string()),
+            Err(_) => Err(VerificationTokenError::ServerError(
+                VerificationTokenServerError::TokenInsertionError,
+            )),
         }
     }
 
-    fn confirm(_token: String, pool: DPool) -> Result<String, AuthError> {
+    fn confirm(_token: String, pool: DPool) -> Result<String, VerificationTokenError> {
         use crate::schema::confirmation_tokens::dsl::*;
         let mut conn = est_conn(pool);
 
@@ -81,17 +85,13 @@ impl ConfirmationToken for Cft {
         {
             Ok(Some(tok)) => {
                 if tok.confirmed_at.is_some() {
-                    return Err(AuthError::VerificationTokenError(
-                        VerificationTokenInvalid::AccountAlreadyVerified,
-                    ));
+                    return Err(VerificationTokenError::AccountAlreadyVerified);
                 }
                 let current_time = Utc::now().naive_utc();
                 if current_time - Duration::seconds(CONFIRMATION_TOKEN_EXIPIRATION_TIME)
                     > tok.created_at
                 {
-                    Err(AuthError::VerificationTokenError(
-                        VerificationTokenInvalid::Expired,
-                    ))
+                    Err(VerificationTokenError::Expired)
                 } else {
                     match diesel::update(
                         schema::confirmation_tokens::dsl::confirmation_tokens
@@ -103,21 +103,19 @@ impl ConfirmationToken for Cft {
                         Ok(_) => Ok(tok),
                         Err(e) => {
                             eprintln!("Error updating token verified status: {:?}", e);
-                            Err(AuthError::ServerError(String::from(
-                                "Unable to verify account",
-                            )))
+                            Err(VerificationTokenError::ServerError(
+                                VerificationTokenServerError::DatabaseError,
+                            ))
                         }
                     }
                 }
             }
-            Ok(None) => Err(AuthError::VerificationTokenError(
-                VerificationTokenInvalid::NotFound,
-            )),
+            Ok(None) => Err(VerificationTokenError::NotFound),
             Err(e) => {
-                eprintln!("Database error while verificating account {:?}", e);
-                Err(AuthError::ServerError(String::from(
-                    "Database Error while account verification",
-                )))
+                eprintln!("Database error while verifying account {:?}", e);
+                Err(VerificationTokenError::ServerError(
+                    VerificationTokenServerError::Other("Unknown".to_string()),
+                ))
             }
         };
 
@@ -131,9 +129,9 @@ impl ConfirmationToken for Cft {
                 .execute(&mut conn)
                 {
                     Ok(_) => Ok("Account verified".to_string()),
-                    Err(_) => Err(AuthError::ServerError(String::from(
-                        "Error while setting users account verified",
-                    ))),
+                    Err(_) => Err(VerificationTokenError::ServerError(
+                        VerificationTokenServerError::DatabaseError,
+                    )),
                 }
             }
             Err(e) => Err(e),
@@ -141,12 +139,12 @@ impl ConfirmationToken for Cft {
     }
 
     async fn send(
-        _token: String,
         _username: String,
         _u_email: String,
         _pool: DPool,
         _email_type: TokenEmailType,
-    ) -> Result<String, AuthError> {
+        _token: Option<String>,
+    ) -> Result<String, VerificationTokenError> {
         dotenv().ok();
         let google_smtp_password =
             env::var("AUTH_EMAIL_PASSWORD").expect("google smtp password needs to be set");
@@ -154,13 +152,25 @@ impl ConfirmationToken for Cft {
         let google_smtp_name =
             env::var("AUTH_EMAIL_NAME").expect("google smtp name needs to be set");
 
+        let token = match _token {
+            Some(tok) => tok,
+            None => match Self::new(_u_email.clone(), _pool) {
+                Ok(tok) => tok,
+                Err(e) => {
+                    return Err(VerificationTokenError::ServerError(
+                        VerificationTokenServerError::TokenGenerationError,
+                    ))
+                }
+            },
+        };
+
+        let email_body = email_body_generator(EmailType::AccountVerification(_username, token));
+
         let email = lettre::Message::builder()
             .from(format!("Sender <{}>", google_smtp_name).parse().unwrap())
-            .to(format!("Reciever <{}>", _u_email).parse().unwrap())
-            .subject("Electrovision Account veryfiying")
-            .body(email_body_generator(EmailType::AccountVerification(
-                _username, _token,
-            )))
+            .to(format!("Receiver <{}>", _u_email).parse().unwrap())
+            .subject("Electrovision Account Verification")
+            .body(email_body)
             .unwrap();
 
         let creds = Credentials::new(google_smtp_name, google_smtp_password);
@@ -171,8 +181,13 @@ impl ConfirmationToken for Cft {
             .build();
 
         match mailer.send(&email) {
-            Ok(_) => Ok("Email send successfully".to_string()),
-            Err(e) => Err(AuthError::ServerError(e.to_string())),
+            Ok(_) => Ok("Email sent successfully".to_string()),
+            Err(e) => {
+                eprintln!("{:?}", e);
+                Err(VerificationTokenError::ServerError(
+                    VerificationTokenServerError::EmailSendingError,
+                ))
+            }
         }
     }
 }

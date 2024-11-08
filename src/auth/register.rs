@@ -8,7 +8,7 @@ use serde_derive::Deserialize;
 use auth::confirmation_token::token::ConfirmationToken;
 
 use crate::auth::confirmation_token::token::Cft;
-use crate::models::{ConfirmationToken, User};
+use crate::models::User;
 use crate::response::JsonResponse;
 use crate::user::NoIdUser;
 use crate::{auth, est_conn, DPool, ResponseKeys};
@@ -110,14 +110,35 @@ pub async fn register(
                 <Cft as ConfirmationToken>::new(request.email.clone(), pool.clone()),
             ) {
                 (Ok(_), Ok(_)) => {
-                    ConfirmationToken::send(
-                        ConfirmationToken::new(usr.email, pool.clone()),
+                    use crate::auth::auth_error::VerificationTokenError;
+                    match <Cft as ConfirmationToken>::send(
                         usr.username,
                         usr.email,
                         pool.clone(),
-                        TokenEmailType::AccountVerificate,
-                    );
-                    HttpResponse::Ok().json(JsonResponse::new(keys.ok_key, keys.ok_value))
+                        auth::confirmation_token::token::TokenEmailType::AccountVerification,
+                        None,
+                    )
+                    .await
+                    {
+                        Ok(_) => {
+                            HttpResponse::Ok().json(JsonResponse::new(keys.ok_key, keys.ok_value))
+                        }
+                        Err(e) => match e {
+                            VerificationTokenError::NotFound => HttpResponse::BadRequest()
+                                .json("Token invalid or not generated yet".to_string()),
+                            VerificationTokenError::AccountAlreadyVerified => {
+                                HttpResponse::BadRequest()
+                                    .json("Account has already been verified".to_string())
+                            }
+                            VerificationTokenError::Expired => {
+                                HttpResponse::BadRequest().json("Token has expired".to_string())
+                            }
+                            VerificationTokenError::ServerError(msg) => {
+                                HttpResponse::InternalServerError()
+                                    .json("Server error while veryfing account".to_string())
+                            }
+                        },
+                    }
                 }
                 (Err(e), _) => {
                     eprintln!("Error inserting user roles: {:?}", e);
