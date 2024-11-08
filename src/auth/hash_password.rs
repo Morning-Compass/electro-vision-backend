@@ -1,5 +1,7 @@
 use bcrypt::hash;
 
+use crate::constants::HASH_COST;
+
 pub struct HashPassword {
     pub hashed_password: String,
 }
@@ -10,7 +12,7 @@ pub trait Hash {
 
 impl Hash for HashPassword {
     async fn hash_password(password: String) -> String {
-        match hash(password, 10) {
+        match hash(password, HASH_COST as u32) {
             Ok(hashed_password) => hashed_password,
             Err(e) => e.to_string(),
         }

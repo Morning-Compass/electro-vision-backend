@@ -5,4 +5,5 @@ pub const JWT_EXPIRATION_TIME: i64 = 900;
 pub const TEST_USERNAME: &str = "tomek";
 pub const TEST_EMAIL: &str = "tomek@el-jot.eu";
 pub const TEST_PASSWORD: &str = "qazxsw2.";
-pub const ROLES: [&str;2] = ["USER", "ADMIN"];
+pub const ROLES: [&str; 2] = ["USER", "ADMIN"];
+pub const HASH_COST: u8 = 10;
