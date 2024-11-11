@@ -2,6 +2,7 @@ use crate::auth::find_user::{Find, FindData};
 use crate::auth::hash_password::Hash;
 use crate::models::User;
 use crate::response::Response;
+use crate::schema::users;
 use crate::{constants::APPLICATION_JSON, models};
 use actix_web::{
     get, put,
@@ -91,10 +92,22 @@ pub async fn list(pool: DPool) -> HttpResponse {
 #[put("/change-password")]
 pub async fn change_password(request: Json<UserChangePassword>, pool: DPool) -> HttpResponse {
     use crate::auth::hash_password::HashPassword;
-    let user = FindData::find_by_email(request.email.clone(), pool).await;
-    let mut user_data = user.unwrap();
-    user_data.password = HashPassword::hash_password(request.password.to_string()).await;
-    println!("\n\n\n\n\nUser password: {:?}", user_data.password);
+    use crate::schema::users::dsl::*;
 
-    return HttpResponse::Ok().finish();
+    let conn = &mut est_conn(pool);
+
+    let new_password = HashPassword::hash_password(request.password.to_string()).await;
+
+    let update_result = diesel::update(users.filter(email.eq(request.email.to_string())))
+        .set(password.eq(new_password))
+        .execute(conn);
+
+    match update_result {
+        Ok(_) => HttpResponse::Ok().json("user password changed"),
+        Err(e) => {
+            HttpResponse::InternalServerError().json(("Change password error: {}", e.to_string()))
+        }
+    };
+
+    HttpResponse::Ok().json("user password changed")
 }
