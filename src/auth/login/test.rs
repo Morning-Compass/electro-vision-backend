@@ -14,6 +14,7 @@ mod tests {
             find_user::{Find, FindData},
             hash_password::Hash,
         },
+        constants::TEST_EMAIL,
         models::User,
         DBPool, DPool,
     };
@@ -21,7 +22,10 @@ mod tests {
     use std::{borrow::Borrow, env};
 
     use crate::user::UserChangePassword;
-    use actix_web::{test, web, App};
+    use actix_web::{
+        test::{self, TestRequest},
+        web, App,
+    };
     use std::str;
 
     pub async fn login_with_roles_helper_email(pool: DPool) -> impl actix_web::Responder {
@@ -60,31 +64,6 @@ mod tests {
             }
             Err(e) => actix_web::HttpResponse::InternalServerError().json(json!({
                 "error": "error while listing user by email",
-                "details": e.to_string(),
-            })),
-        }
-    }
-
-    pub async fn change_password_helper(
-        pool: DPool,
-        data: web::Json<UserChangePassword>,
-    ) -> impl actix_web::Responder {
-        println!(
-            "Data - password: {:?}, email: {:?}",
-            data.password, data.email
-        );
-
-        let user_data = FindData::find_by_email(data.email.to_string(), pool).await;
-        match user_data {
-            Ok(mut user) => {
-                user.password = data.password.to_string();
-                actix_web::HttpResponse::Ok().json(json!({
-                    "message": "user password changed",
-                    "user": user,
-                }))
-            }
-            Err(e) => actix_web::HttpResponse::InternalServerError().json(json!({
-                "error": "error while changing user password",
                 "details": e.to_string(),
             })),
         }
@@ -154,17 +133,17 @@ mod tests {
 
     #[actix_web::test]
     async fn test_change_password() {
-        use crate::auth::hash_password::HashPassword;
+        use crate::user::change_password;
         let req_data = UserChangePassword {
-            email: "tomek@el-jot.eu".to_string(),
-            password: HashPassword::hash_password("123".to_string()).await,
+            email: TEST_EMAIL.to_string(),
+            password: "123".to_string(),
         };
 
         let pool = setup_pool();
-        let app = test::init_service(
+        let mut app = test::init_service(
             App::new()
                 .app_data(web::Data::new(pool.clone()))
-                .route("/change-password", web::put().to(change_password_helper)),
+                .service(change_password), // here instead of making it a request we call on the endpoint function, so that it calls the function not some helper
         )
         .await;
 
@@ -173,12 +152,10 @@ mod tests {
             .set_json(req_data)
             .to_request();
 
-        let resp = test::call_service(&app, req).await;
-
+        let resp = test::call_service(&mut app, req).await; // call the premade app variable and the request (req) and call upon the endpoint it self
         assert!(resp.status().is_success(), "Password change request failed");
 
         let body = test::read_body(resp).await;
-        println!("code: 23123123123123131231\n{:?}\n", body);
 
         let body_str = str::from_utf8(&body).expect("Failed to convert body to string");
         assert!(
