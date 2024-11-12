@@ -1,5 +1,6 @@
 use crate::constants::APPLICATION_JSON;
 use crate::models::User;
+use crate::response_handler::Response;
 use crate::{est_conn, response, schema, DPool};
 use actix_web::web;
 use actix_web::{post, web::Json, HttpResponse};
@@ -108,6 +109,11 @@ pub async fn list_user(
 
 #[post("/login-username")]
 pub async fn login_username(request: Json<RequestLoginUsername>, pool: DPool) -> HttpResponse {
+    use crate::response_handler::ResponseHandler;
+
+    let json_handler =
+        ResponseHandler::file_get_contents("../../../api-response.json".to_string()).await;
+    println!("{:?}", json_handler);
     let user_username = request.username.clone();
     let user = web::block(move || list_user(LoginMethodIdentifier::Username(user_username), pool))
         .await
