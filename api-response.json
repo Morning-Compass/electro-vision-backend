@@ -30,6 +30,7 @@
     "status": "498"
   },
   "email_resend_success": {
+    "key": "email_error",
     "message": "Email sent successfully",
     "status": "200"
   },

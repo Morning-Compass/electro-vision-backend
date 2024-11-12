@@ -2,6 +2,7 @@ use crate::auth::find_user::{Find, FindData};
 use crate::auth::hash_password::Hash;
 use crate::models::User;
 use crate::response::Response;
+use crate::response_handler::{ResponseError, ResponseHandler, ResponseTrait};
 use crate::schema::users;
 use crate::{constants::APPLICATION_JSON, models};
 use actix_web::{
@@ -93,6 +94,19 @@ pub async fn list(pool: DPool) -> HttpResponse {
 pub async fn change_password(request: Json<UserChangePassword>, pool: DPool) -> HttpResponse {
     use crate::auth::hash_password::HashPassword;
     use crate::schema::users::dsl::*;
+
+    let contents = match ResponseHandler::file_get_contents("./api-response.json".to_string()).await
+    {
+        Ok(content) => content,
+        Err(e) => {
+            println!("\n\n\n\n ERROR {:?}", e);
+            return HttpResponse::InternalServerError().json(serde_json::json!({
+                "error": format!("An error occurred: {:#?}", e)
+            }));
+        }
+    };
+
+    println!("Content of file: {:?}", contents);
 
     let conn = &mut est_conn(pool);
 
