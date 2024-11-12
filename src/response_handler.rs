@@ -16,13 +16,13 @@ pub struct ResponseValues {
 }
 
 pub trait Response {
-    async fn file_get_contents(file_name: String) -> Result<Value, String>;
+    async fn file_get_contents(path_name: String) -> Result<Value, String>;
 }
 
 impl Response for ResponseHandler {
-    async fn file_get_contents(file_name: String) -> Result<Value, String> {
+    async fn file_get_contents(path_name: String) -> Result<Value, String> {
         // Try to open the file
-        let file = File::open(file_name);
+        let file = File::open(path_name);
         let file = match file {
             Ok(file) => file,
             Err(e) => return Err(e.to_string()),
