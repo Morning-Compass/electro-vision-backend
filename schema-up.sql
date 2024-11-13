@@ -14,7 +14,7 @@ CREATE TABLE confirmation_tokens (
 
 -- Create the roles table
 CREATE TABLE roles (
-    id SMALLINT PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     name VARCHAR NOT NULL
 );
 

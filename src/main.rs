@@ -12,13 +12,17 @@ use actix_web::error::ErrorInternalServerError;
 use actix_web::web::Data;
 use actix_web::{middleware, App, HttpServer};
 use chrono::Utc;
+use constants::ROLES;
+use core::panic;
 use diesel::{
     r2d2::{self, ConnectionManager, Pool, PooledConnection},
     PgConnection,
 };
 use diesel::{ExpressionMethods, RunQueryDsl};
 use dotenv::dotenv;
-use models::User;
+use models::{Role, User};
+use schema::roles::name;
+use schema::{roles, user_roles};
 use std::env;
 use std::fs::File;
 use std::io::Read;
@@ -38,23 +42,35 @@ async fn insert_test_data(pool: DPool) -> Result<(), actix_web::Error> {
     let hashed_password = bcrypt::hash(constants::TEST_PASSWORD, bcrypt::DEFAULT_COST)
         .map_err(|_| ErrorInternalServerError("Failed to hash password"))?;
 
-    match diesel::insert_into(users)
-        .values((
-            username.eq(constants::TEST_USERNAME),
-            email.eq(constants::TEST_EMAIL),
-            password.eq(hashed_password),
-            created_at.eq(Utc::now().naive_utc()),
-            account_valid.eq(false),
-        ))
-        .get_result::<User>(&mut est_conn(pool))
+    match diesel::insert_into(roles::table)
+        .values(name.eq(ROLES[0].to_string()))
+        .get_result::<Role>(&mut est_conn(pool.clone()))
     {
         Ok(_) => {
-            println!("Test data inserted successfully");
-            Ok(())
+            match diesel::insert_into(users)
+                .values((
+                    username.eq(constants::TEST_USERNAME),
+                    email.eq(constants::TEST_EMAIL),
+                    password.eq(hashed_password),
+                    created_at.eq(Utc::now().naive_utc()),
+                    account_valid.eq(false),
+                ))
+                .get_result::<User>(&mut est_conn(pool))
+            {
+                Ok(_) => {
+                    println!("Test data inserted successfully");
+                    Ok(())
+                }
+                Err(e) => {
+                    eprintln!("Error inserting user: {:?}", e);
+                    Err(ErrorInternalServerError("Failed to insert test data"))
+                }
+            }
         }
         Err(e) => {
-            eprintln!("Error inserting user: {:?}", e);
-            Err(ErrorInternalServerError("Failed to insert test data"))
+            eprintln!("{:?}", e);
+            eprintln!("Error while inserting test data");
+            panic!("Panicked while inserting test data");
         }
     }
 }
