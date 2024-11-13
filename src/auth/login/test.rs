@@ -16,6 +16,7 @@ mod tests {
         },
         constants::TEST_EMAIL,
         models::User,
+        response_handler::ResponseTrait,
         DBPool, DPool,
     };
     use serde_json::json;
@@ -134,6 +135,7 @@ mod tests {
     #[actix_web::test]
     async fn test_change_password() {
         use crate::user::change_password;
+
         let req_data = UserChangePassword {
             email: TEST_EMAIL.to_string(),
             password: "123".to_string(),

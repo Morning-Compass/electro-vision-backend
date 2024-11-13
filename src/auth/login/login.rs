@@ -108,6 +108,8 @@ pub async fn list_user(
 
 #[post("/login-username")]
 pub async fn login_username(request: Json<RequestLoginUsername>, pool: DPool) -> HttpResponse {
+    use crate::response_handler::ResponseHandler;
+
     let user_username = request.username.clone();
     let user = web::block(move || list_user(LoginMethodIdentifier::Username(user_username), pool))
         .await

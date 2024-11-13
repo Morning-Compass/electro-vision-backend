@@ -2,6 +2,7 @@ mod auth;
 mod constants;
 mod models;
 mod response;
+mod response_handler;
 mod schema;
 mod user;
 
