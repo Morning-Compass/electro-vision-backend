@@ -1,64 +1,75 @@
-use std::fmt::format;
-
-use crate::constants::{APPLICATION_JSON, CONNECTION_POOL_ERROR};
+use crate::auth::find_user::{Find, FindData};
+use crate::auth::hash_password::Hash;
 use crate::models::User;
 use crate::response::Response;
+use crate::schema::users;
+use crate::{constants::APPLICATION_JSON, models};
 use actix_web::{
-    get,
-    web::{self, Data},
+    get, put,
+    web::Json,
+    web::{self},
     HttpResponse,
 };
-use chrono::Utc;
+use chrono::{NaiveDateTime, Utc};
+use diesel::deserialize;
 use diesel::{prelude::*, result::Error};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-use crate::DBPool;
+use crate::{est_conn, DPool};
 
-pub type Users = Response<User>;
+pub type Users = Response<Vec<User>>;
 
-impl User {
-    pub fn new(self) -> Self {
-        Self {
-            id: 0, //dont know what to add here for db
-            username: self.username,
-            email: self.email,
-            password: self.password,
+pub struct NoIdUser {
+    pub username: String,
+    pub email: String,
+    pub password: String,
+    pub created_at: NaiveDateTime,
+    pub account_valid: bool,
+}
+
+#[derive(Deserialize)]
+pub struct UserEmail {
+    pub email: String,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct UserChangePassword {
+    pub email: String,
+    pub password: String,
+}
+
+impl models::User {
+    pub fn new(username: String, email: String, password: String) -> NoIdUser {
+        NoIdUser {
+            username,
+            email,
+            password,
             created_at: Utc::now().naive_utc(),
             account_valid: false,
         }
     }
 }
 
-pub async fn list_users(amount: i64, pool: Data<DBPool>) -> Result<Users, Error> {
+pub async fn list_users(amount: i64, pool: DPool) -> Result<Users, Error> {
     use crate::schema::users::dsl::*;
-    let mut conn = pool.get().expect(CONNECTION_POOL_ERROR);
 
-    let users_query = match users
+    let users_query = users
         .select(User::as_select())
         .order(created_at.desc())
         .limit(amount)
-        .load::<User>(&mut conn)
-    {
-        Ok(usr) => usr,
-        Err(e) => {
+        .load::<User>(&mut est_conn(pool))
+        .unwrap_or_else(|e| {
             eprintln!("Error querying users {:?}", e);
             vec![]
-        }
-    };
+        });
 
     Ok(Users {
         response: users_query.into_iter().collect(),
     })
 }
 
-#[derive(Serialize)]
-struct UsersWithMessage {
-    message: String,
-    users: Users,
-}
-
 #[get("/users")]
-pub async fn list(pool: Data<DBPool>) -> HttpResponse {
+pub async fn list(pool: DPool) -> HttpResponse {
     let users_listed = web::block(move || list_users(50, pool))
         .await
         .map_err(|e| {
@@ -68,18 +79,35 @@ pub async fn list(pool: Data<DBPool>) -> HttpResponse {
         .unwrap();
 
     match users_listed.await {
-        Ok(users) => {
-            let response = UsersWithMessage {
-                message: "hey users!".to_string(),
-                users,
-            };
-            HttpResponse::Ok()
-                .content_type(APPLICATION_JSON)
-                .json(response)
-        }
+        Ok(users) => HttpResponse::Ok()
+            .content_type(APPLICATION_JSON)
+            .json(users),
         Err(e) => {
             eprintln!("Failed to serialize users {:?}", e);
             HttpResponse::InternalServerError().finish()
         }
     }
+}
+
+#[put("/change-password")]
+pub async fn change_password(request: Json<UserChangePassword>, pool: DPool) -> HttpResponse {
+    use crate::auth::hash_password::HashPassword;
+    use crate::schema::users::dsl::*;
+
+    let conn = &mut est_conn(pool);
+
+    let new_password = HashPassword::hash_password(request.password.to_string()).await;
+
+    let update_result = diesel::update(users.filter(email.eq(request.email.to_string())))
+        .set(password.eq(new_password))
+        .execute(conn);
+
+    match update_result {
+        Ok(_) => HttpResponse::Ok().json("user password changed"),
+        Err(e) => {
+            HttpResponse::InternalServerError().json(("Change password error: {}", e.to_string()))
+        }
+    };
+
+    HttpResponse::Ok().json("user password changed")
 }

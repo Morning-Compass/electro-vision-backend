@@ -1,0 +1,51 @@
+{
+  "register_client_error": {
+    "key": "register_client_error",
+    "message": "Email has already been taken",
+    "status": "502"
+  },
+  "register_server_error": {
+    "key": "register_server_error",
+    "message": "Server error while processing register",
+    "status": "500"
+  },
+  "register_success": {
+    "key": "register_success",
+    "message": "User registered successfully",
+    "status": "200"
+  },
+  "account_validation_success": {
+    "key": "validation_success",
+    "message": "Account validated successfully",
+    "status": "200"
+  },
+  "account_validation_server_error": {
+    "key": "validation_server_error",
+    "message": "Server error while processing account validation",
+    "status": "500"
+  },
+  "account_validation_token_invalid": {
+    "key": "validation_error",
+    "message": "Token invalid",
+    "status": "498"
+  },
+  "email_resend_success": {
+    "message": "Email sent successfully",
+    "status": "200"
+  },
+  "login_username_success": {
+    "key": "login_success",
+    "message": "User logged in successfully",
+    "status": "200"
+  },
+  "login_username_client_error": {
+    "key": "login_error",
+    "message": "Incorrect credentials",
+    "status": "401"
+  },
+  "login_username_server_error": {
+    "key": "login__server_error",
+    "message": "Server error while processing login",
+    "status": "500"
+  }
+}

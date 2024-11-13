@@ -13,7 +13,7 @@ diesel::table! {
 
 diesel::table! {
     roles (id) {
-        id -> Int4,
+        id -> Int2,
         name -> Varchar,
     }
 }
@@ -21,7 +21,7 @@ diesel::table! {
 diesel::table! {
     user_roles (user_id, role_id) {
         user_id -> Int4,
-        role_id -> Int4,
+        role_id -> Int2,
     }
 }
 
