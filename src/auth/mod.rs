@@ -4,6 +4,7 @@ pub use auth_error::VerificationTokenInvalid;
 pub mod confirmation_token;
 pub mod find_user;
 pub mod hash_password;
+pub mod hash_password_tests;
 pub mod jwt;
 pub mod login;
 pub mod register;
