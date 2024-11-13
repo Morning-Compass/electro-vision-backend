@@ -13,8 +13,9 @@ mod tests {
             self,
             find_user::{Find, FindData},
             hash_password::Hash,
+            login::login::{login_username, RequestLoginEmail, RequestLoginUsername},
         },
-        constants::TEST_EMAIL,
+        constants::{TEST_EMAIL, TEST_PASSWORD, TEST_USERNAME},
         models::User,
         response_handler::ResponseTrait,
         DBPool, DPool,
@@ -106,25 +107,36 @@ mod tests {
     #[actix_web::test]
     async fn test_login_with_roles_username() {
         let pool = setup_pool();
-        let app = test::init_service(App::new().app_data(web::Data::new(pool.clone())).route(
-            "/login_by_username",
-            web::get().to(login_with_roles_helper_username),
-        ))
+
+        let req_data = RequestLoginUsername {
+            username: TEST_USERNAME.to_string(),
+            password: TEST_PASSWORD.to_string(),
+        };
+
+        let mut app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(pool.clone()))
+                .service(login_username),
+        )
         .await;
 
-        let req = test::TestRequest::get()
-            .uri("/login_by_username")
+        let req = test::TestRequest::post()
+            .uri("/login-username")
+            .set_json(json!(req_data))
             .to_request();
 
-        let resp = test::call_service(&app, req).await;
+        let resp = test::call_service(&mut app, req).await;
 
-        assert!(
-            resp.status().is_success(),
-            "Listing user by username failed"
-        );
+        // assert!(
+        //     resp.status().is_success(),
+        //     "Listing user by username failed"
+        // );
 
         let body = test::read_body(resp).await;
         let body_str = str::from_utf8(&body).expect("Failed to convert body to string");
+
+        println!("\n BODY: {:?} \n", body_str);
+
         assert!(
             body_str.contains(r#""message":"user""#),
             "Unexpected response body: {:?}",

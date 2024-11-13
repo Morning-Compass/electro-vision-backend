@@ -106,7 +106,7 @@ pub async fn change_password(request: Json<UserChangePassword>, pool: DPool) -> 
         }
     };
 
-    println!("Content of file: {:?}", contents);
+    // println!("Content of file: {:?}", contents);
 
     let conn = &mut est_conn(pool);
 

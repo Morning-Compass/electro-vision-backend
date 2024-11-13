@@ -1,3 +1,4 @@
+use crate::auth::hash_password::{Hash, HashPassword};
 use crate::constants::APPLICATION_JSON;
 use crate::models::User;
 use crate::{est_conn, response, schema, DPool};
@@ -62,16 +63,16 @@ impl ResponseUser {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct RequestLoginUsername {
-    username: String,
-    password: String,
+    pub username: String,
+    pub password: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct RequestLoginEmail {
-    email: String,
-    password: String,
+    pub email: String,
+    pub password: String,
 }
 
 pub async fn list_user(
@@ -107,13 +108,14 @@ pub async fn list_user(
 }
 
 #[post("/login-username")]
-pub async fn login_username(request: Json<RequestLoginUsername>, pool: DPool) -> HttpResponse {
-    use crate::response_handler::ResponseHandler;
-
+pub async fn login_username(mut request: Json<RequestLoginUsername>, pool: DPool) -> HttpResponse {
     let user_username = request.username.clone();
     let user = web::block(move || list_user(LoginMethodIdentifier::Username(user_username), pool))
         .await
         .unwrap();
+    request.password = HashPassword::hash_password(request.password.clone()).await;
+
+    println!("\n PASSWORD: {:?} \n", request.password);
 
     match user.await {
         Ok(usr) => match bcrypt::verify(&request.password, &usr.password) {

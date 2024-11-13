@@ -61,7 +61,7 @@ impl ResponseTrait for ResponseHandler {
                 return Err(ResponseError::Json(e));
             }
         };
-        println!("Data response {:?}", response_data);
+        // println!("Data response {:?}", response_data);
 
         Ok(response_data)
     }
