@@ -14,6 +14,7 @@ use actix_web::{middleware, App, HttpServer};
 use chrono::Utc;
 use constants::ROLES;
 use core::panic;
+use diesel::prelude::Insertable;
 use diesel::{
     r2d2::{self, ConnectionManager, Pool, PooledConnection},
     PgConnection,
@@ -21,7 +22,6 @@ use diesel::{
 use diesel::{ExpressionMethods, RunQueryDsl};
 use dotenv::dotenv;
 use models::{Role, User};
-use schema::roles::name;
 use schema::{roles, user_roles};
 use std::env;
 use std::fs::File;
@@ -42,8 +42,11 @@ async fn insert_test_data(pool: DPool) -> Result<(), actix_web::Error> {
     let hashed_password = bcrypt::hash(constants::TEST_PASSWORD, bcrypt::DEFAULT_COST)
         .map_err(|_| ErrorInternalServerError("Failed to hash password"))?;
 
-    match diesel::insert_into(roles::table)
-        .values(name.eq(ROLES[0].to_string()))
+    match diesel::insert_into(schema::roles::dsl::roles)
+        .values((
+            schema::roles::dsl::id.eq(1),
+            schema::roles::dsl::name.eq(ROLES[0].to_string()),
+        ))
         .get_result::<Role>(&mut est_conn(pool.clone()))
     {
         Ok(_) => {
