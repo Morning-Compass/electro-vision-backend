@@ -15,6 +15,7 @@ use chrono::Utc;
 use constants::ROLES;
 use core::panic;
 use diesel::prelude::Insertable;
+use diesel::result::{DatabaseErrorKind, Error};
 use diesel::{
     r2d2::{self, ConnectionManager, Pool, PooledConnection},
     PgConnection,
@@ -70,9 +71,12 @@ async fn insert_test_data(pool: DPool) -> Result<(), actix_web::Error> {
                 }
             }
         }
+        Err(Error::DatabaseError(DatabaseErrorKind::UniqueViolation, _)) => {
+            println!("Role with this ID or name already exists. Skipping insertion.");
+            Ok(())
+        }
         Err(e) => {
-            eprintln!("{:?}", e);
-            eprintln!("Error while inserting test data");
+            eprintln!("Test data insertion error: \n {:?}", e);
             panic!("Panicked while inserting test data");
         }
     }

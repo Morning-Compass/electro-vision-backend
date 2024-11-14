@@ -15,7 +15,7 @@ CREATE TABLE confirmation_tokens (
 -- Create the roles table
 CREATE TABLE roles (
     id SERIAL PRIMARY KEY,
-    name VARCHAR NOT NULL
+    name VARCHAR NOT NULL DEFAULT 'USER'  
 );
 
 -- Create the users table

@@ -10,8 +10,10 @@ mod tests {
     use std::str;
 
     use crate::{
-        auth::confirmation_token::token::{Cft, ConfirmationToken},
-        auth::{AuthError, VerificationTokenInvalid},
+        auth::{
+            confirmation_token::token::{Cft, ConfirmationToken},
+            AuthError, VerificationTokenError,
+        },
         DBPool, DPool,
     };
 
@@ -50,28 +52,18 @@ mod tests {
                 println!("----------   ERROR   ----------");
                 eprintln!("Error verifying token {:?}", e);
                 match e {
-                    AuthError::VerificationTokenError(invalid) => match invalid {
-                        VerificationTokenInvalid::NotFound => {
-                            actix_web::HttpResponse::BadRequest().json("Token not found")
-                        }
-                        VerificationTokenInvalid::Expired => {
-                            actix_web::HttpResponse::BadRequest().json("Token has expired")
-                        }
-                        VerificationTokenInvalid::AccountAlreadyVerified => {
-                            actix_web::HttpResponse::BadRequest().json("Account already verified")
-                        }
-                        VerificationTokenInvalid::ServerError => {
-                            actix_web::HttpResponse::InternalServerError()
-                                .json("Server error while verifying token")
-                        }
-                    },
-                    AuthError::ServerError(message) => {
-                        eprintln!("Server error: {}", message);
-                        actix_web::HttpResponse::InternalServerError().json("Internal server error")
+                    VerificationTokenError::NotFound => {
+                        actix_web::HttpResponse::BadRequest().json("Token not found")
                     }
-                    _ => {
-                        eprintln!("Unknown error occurred: {:?}", e);
-                        actix_web::HttpResponse::InternalServerError().json("Unknown error")
+                    VerificationTokenError::Expired => {
+                        actix_web::HttpResponse::BadRequest().json("Token has expired")
+                    }
+                    VerificationTokenError::AccountAlreadyVerified => {
+                        actix_web::HttpResponse::BadRequest().json("Account already verified")
+                    }
+                    VerificationTokenError::ServerError(_) => {
+                        actix_web::HttpResponse::InternalServerError()
+                            .json("Server error while verifying token")
                     }
                 }
             }

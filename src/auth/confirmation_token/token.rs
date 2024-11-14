@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::env;
 
 use chrono::{Duration, NaiveDateTime, TimeDelta, Utc};
@@ -147,10 +148,10 @@ impl ConfirmationToken for Cft {
     ) -> Result<String, VerificationTokenError> {
         dotenv().ok();
         let google_smtp_password =
-            env::var("AUTH_EMAIL_PASSWORD").expect("google smtp password needs to be set");
+            env::var("AUTH_EMAIL_PASSWORD").expect("google smtp password needs to be set").to_string();
 
         let google_smtp_name =
-            env::var("AUTH_EMAIL_NAME").expect("google smtp name needs to be set");
+            env::var("AUTH_EMAIL_NAME").expect("google smtp name needs to be set").to_string();
 
         let token = match _token {
             Some(tok) => tok,
