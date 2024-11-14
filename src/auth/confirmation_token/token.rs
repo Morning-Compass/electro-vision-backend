@@ -6,6 +6,7 @@ use diesel::prelude::OptionalExtension;
 use diesel::query_dsl::methods::FilterDsl;
 use diesel::{ExpressionMethods, RunQueryDsl};
 use dotenvy::dotenv;
+use lettre::message::{MultiPart, SinglePart};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::Transport;
 
@@ -147,11 +148,13 @@ impl ConfirmationToken for Cft {
         _token: Option<String>,
     ) -> Result<String, VerificationTokenError> {
         dotenv().ok();
-        let google_smtp_password =
-            env::var("AUTH_EMAIL_PASSWORD").expect("google smtp password needs to be set").to_string();
+        let google_smtp_password = env::var("AUTH_EMAIL_PASSWORD")
+            .expect("google smtp password needs to be set")
+            .to_string();
 
-        let google_smtp_name =
-            env::var("AUTH_EMAIL_NAME").expect("google smtp name needs to be set").to_string();
+        let google_smtp_name = env::var("AUTH_EMAIL_NAME")
+            .expect("google smtp name needs to be set")
+            .to_string();
 
         let token = match _token {
             Some(tok) => tok,
@@ -165,13 +168,20 @@ impl ConfirmationToken for Cft {
             },
         };
 
-        let email_body = email_body_generator(EmailType::AccountVerification(_username, token));
+        let email_body =
+            email_body_generator(EmailType::AccountVerification(_username.clone(), token));
 
         let email = lettre::Message::builder()
-            .from(format!("Sender <{}>", google_smtp_name).parse().unwrap())
-            .to(format!("Receiver <{}>", _u_email).parse().unwrap())
+            .from(
+                format!("Electro-Vision Auth <{}>", google_smtp_name)
+                    .parse()
+                    .unwrap(),
+            )
+            .to(format!("{} <{}>", _username, _u_email).parse().unwrap())
             .subject("Electrovision Account Verification")
-            .body(email_body)
+            .multipart(
+                MultiPart::alternative().singlepart(SinglePart::html(email_body.to_string())),
+            )
             .unwrap();
 
         let creds = Credentials::new(google_smtp_name, google_smtp_password);
