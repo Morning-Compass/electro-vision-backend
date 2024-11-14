@@ -2,6 +2,7 @@ use std::any::Any;
 use std::env;
 
 use chrono::{Duration, NaiveDateTime, TimeDelta, Utc};
+use diesel::dsl::exists;
 use diesel::prelude::OptionalExtension;
 use diesel::query_dsl::methods::FilterDsl;
 use diesel::{ExpressionMethods, RunQueryDsl};
@@ -12,6 +13,7 @@ use lettre::Transport;
 
 use crate::auth::auth_error::{VerificationTokenError, VerificationTokenServerError};
 use crate::emails::{email_body_generator, EmailType};
+use crate::schema::confirmation_tokens;
 use crate::schema::users::account_valid;
 use crate::{constants::CONFIRMATION_TOKEN_EXIPIRATION_TIME, est_conn, DPool};
 use crate::{models, schema};
@@ -29,7 +31,7 @@ pub struct Cft {
 }
 
 pub trait ConfirmationToken {
-    fn new(email: String, pool: DPool) -> Result<String, VerificationTokenError>;
+    fn new(email: String, resend: bool, pool: DPool) -> Result<String, VerificationTokenError>;
     fn confirm(token: String, pool: DPool) -> Result<String, VerificationTokenError>;
     async fn send(
         username: String,
@@ -37,15 +39,30 @@ pub trait ConfirmationToken {
         pool: DPool,
         email_type: TokenEmailType,
         token: Option<String>,
+        resend: bool,
     ) -> Result<String, VerificationTokenError>;
 }
 
 impl ConfirmationToken for Cft {
-    fn new(u_email: String, pool: DPool) -> Result<String, VerificationTokenError> {
+    fn new(u_email: String, resend: bool, pool: DPool) -> Result<String, VerificationTokenError> {
         use crate::schema::confirmation_tokens::dsl::*;
 
+        if !resend {
+            let token_exists = diesel::select(exists(
+                confirmation_tokens.filter(schema::confirmation_tokens::user_email.eq(&u_email)),
+            ))
+            .get_result::<bool>(&mut est_conn(pool.clone()))
+            .map_err(|_| {
+                VerificationTokenError::ServerError(VerificationTokenServerError::DatabaseError)
+            })?;
+
+            if token_exists {
+                return Err(VerificationTokenError::TokenAlreadyExists);
+            }
+        }
+
         let ctoken = Cft {
-            user_email: u_email,
+            user_email: u_email.clone(),
             token: uuid::Uuid::new_v4().to_string(),
             created_at: Utc::now().naive_utc(),
             expires_at: Utc::now()
@@ -114,9 +131,12 @@ impl ConfirmationToken for Cft {
             }
             Ok(None) => Err(VerificationTokenError::NotFound),
             Err(e) => {
-                eprintln!("Database error while verifying account {:?}", e);
+                eprintln!(
+                    "Database error while chcking if token already exists {:?}",
+                    e
+                );
                 Err(VerificationTokenError::ServerError(
-                    VerificationTokenServerError::Other("Unknown".to_string()),
+                    VerificationTokenServerError::TokenGenerationError,
                 ))
             }
         };
@@ -146,6 +166,7 @@ impl ConfirmationToken for Cft {
         _pool: DPool,
         _email_type: TokenEmailType,
         _token: Option<String>,
+        _resend: bool,
     ) -> Result<String, VerificationTokenError> {
         dotenv().ok();
         let google_smtp_password = env::var("AUTH_EMAIL_PASSWORD")
@@ -158,12 +179,13 @@ impl ConfirmationToken for Cft {
 
         let token = match _token {
             Some(tok) => tok,
-            None => match Self::new(_u_email.clone(), _pool) {
+            None => match Self::new(_u_email.clone(), _resend, _pool) {
                 Ok(tok) => tok,
                 Err(e) => {
+                    eprintln!("generating token in sending erro {:?}", e);
                     return Err(VerificationTokenError::ServerError(
                         VerificationTokenServerError::TokenGenerationError,
-                    ))
+                    ));
                 }
             },
         };

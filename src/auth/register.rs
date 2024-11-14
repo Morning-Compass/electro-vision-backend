@@ -107,16 +107,17 @@ pub async fn register(
         Ok(usr) => {
             match (
                 insert_user_roles(usr.id, pool.clone()).await,
-                <Cft as ConfirmationToken>::new(request.email.clone(), pool.clone()),
+                <Cft as ConfirmationToken>::new(request.email.clone(), false, pool.clone()),
             ) {
-                (Ok(_), Ok(_)) => {
+                (Ok(_), Ok(tok)) => {
                     use crate::auth::auth_error::VerificationTokenError;
                     match <Cft as ConfirmationToken>::send(
                         usr.username,
                         usr.email,
                         pool.clone(),
                         auth::confirmation_token::token::TokenEmailType::AccountVerification,
-                        None,
+                        Some(tok),
+                        false,
                     )
                     .await
                     {
@@ -133,9 +134,12 @@ pub async fn register(
                             VerificationTokenError::Expired => {
                                 HttpResponse::BadRequest().json("Token has expired".to_string())
                             }
-                            VerificationTokenError::ServerError(msg) => {
+                            VerificationTokenError::ServerError(_) => {
                                 HttpResponse::InternalServerError()
                                     .json("Server error while veryfing account".to_string())
+                            }
+                            VerificationTokenError::TokenAlreadyExists => {
+                                HttpResponse::BadRequest().json("Verification token already exists")
                             }
                         },
                     }

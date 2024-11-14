@@ -27,10 +27,14 @@ pub async fn validate_account(user_token: Path<Token>, pool: DPool) -> HttpRespo
         Err(e) => match e {
             VerificationTokenError::NotFound => HttpResponse::BadRequest().json("Token not found"),
             VerificationTokenError::Expired => HttpResponse::BadRequest().json("Token expired"),
-            VerificationTokenError::AccountAlreadyVerified => HttpResponse::BadRequest().json("Account already veryfied"),
-            VerificationTokenError::ServerError(_) => HttpResponse::InternalServerError().json(ValidateResponse::new(
-                "An unexpected error occurred".to_string(),
-            )
+            VerificationTokenError::AccountAlreadyVerified => {
+                HttpResponse::BadRequest().json("Account already veryfied")
+            }
+            VerificationTokenError::TokenAlreadyExists => {
+                HttpResponse::BadRequest().json("Token already exists")
+            }
+            VerificationTokenError::ServerError(_) => HttpResponse::InternalServerError().json(
+                ValidateResponse::new("An unexpected error occurred".to_string()),
             ),
         },
     }

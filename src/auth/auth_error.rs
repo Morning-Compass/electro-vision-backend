@@ -4,6 +4,7 @@ pub enum VerificationTokenError {
     AccountAlreadyVerified,
     ServerError(VerificationTokenServerError),
     NotFound,
+    TokenAlreadyExists,
 }
 
 #[derive(Debug)]
