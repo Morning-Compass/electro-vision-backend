@@ -7,4 +7,6 @@ pub mod find_user;
 pub mod jwt;
 pub mod login;
 pub mod register;
+pub mod resend_verification_email;
 pub mod validate_account;
+
