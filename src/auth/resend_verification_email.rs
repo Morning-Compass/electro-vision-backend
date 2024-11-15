@@ -2,9 +2,14 @@ use actix_web::{post, web::Json, HttpResponse};
 use diesel::deserialize;
 use serde::Deserialize;
 
-use crate::{models::User, DPool};
+use crate::{
+    models::{self, User},
+    DPool,
+};
 
-use super::{confirmation_token::token::ConfirmationToken, find_user::Find};
+use crate::auth::find_user::{Find, FindData};
+
+use super::confirmation_token::token::{Cft, ConfirmationToken};
 
 #[derive(Deserialize)]
 struct ResendVerificationEmailRequest {
@@ -16,26 +21,27 @@ pub async fn resend_verification_email(
     request: Json<ResendVerificationEmailRequest>,
     pool: DPool,
 ) -> HttpResponse {
-    match Find::find_by_email(request.email, pool.clone()).await {
+    let user_data = FindData::find_by_email(request.email.clone(), pool.clone()).await;
+
+    match user_data {
+        Err(_) => HttpResponse::InternalServerError().json("Error while getting user data"),
         Ok(usr) => {
-            match ConfirmationToken::send(
+            match <Cft as ConfirmationToken>::send(
                 usr.username,
                 usr.email,
                 pool,
                 crate::auth::confirmation_token::token::TokenEmailType::AccountVerificationResend,
                 None,
                 true,
-            ) {
-                Ok(_) => HttpResponse::Ok().json("Email resend successfully"),
-                Err(e) => {
-                    eprintln!("Error while resending verification email: {:?}", e);
+            )
+            .await
+            {
+                Ok(_) => HttpResponse::Ok().json("Email resent successfully"),
+                Err(_) => {
+                    eprintln!("Error while resending verification email");
                     HttpResponse::InternalServerError().json("Server error while resending email")
                 }
             }
-        }
-        Err(_) => {
-            eprintln!("Error while checking for user by email");
-            return HttpResponse::InternalServerError().json("Server error");
         }
     }
 }
