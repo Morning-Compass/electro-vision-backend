@@ -190,8 +190,14 @@ impl ConfirmationToken for Cft {
             },
         };
 
-        let email_body =
-            email_body_generator(EmailType::AccountVerification(_username.clone(), token));
+        let email_body = match _email_type {
+            TokenEmailType::AccountVerification => {
+                email_body_generator(EmailType::AccountVerification(_username.clone(), token))
+            }
+            TokenEmailType::AccountVerificationResend => email_body_generator(
+                EmailType::AccountVerificationResend(_username.clone(), token),
+            ),
+        };
 
         let email = lettre::Message::builder()
             .from(
