@@ -16,7 +16,7 @@ mod tests {
         },
         constants::TEST_EMAIL,
         models::User,
-        response_handler::ResponseTrait,
+        response_handler::{ResponseHandler, ResponseTrait},
         DBPool, DPool,
     };
     use serde_json::json;
@@ -25,7 +25,7 @@ mod tests {
     use crate::user::UserChangePassword;
     use actix_web::{
         test::{self, TestRequest},
-        web, App,
+        web, App, Error, HttpResponse,
     };
     use std::str;
 

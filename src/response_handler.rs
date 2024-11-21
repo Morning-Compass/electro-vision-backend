@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use serde_json;
 use std::fs::File;
 use std::io::Error as IoError;
 
@@ -29,22 +29,58 @@ pub struct ResponseValues {
     pub status: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum ResponseError {
-    Io(IoError),
-    Json(serde_json::Error),
+    #[serde(
+        serialize_with = "serialize_io_error",
+        deserialize_with = "deserialize_io_error"
+    )]
+    Io(String),
+    #[serde(
+        serialize_with = "serialize_json_error",
+        deserialize_with = "deserialize_json_error"
+    )]
+    Json(String),
 }
 
 impl From<IoError> for ResponseError {
     fn from(error: IoError) -> Self {
-        ResponseError::Io(error)
+        ResponseError::Io(format!("{:?}", error))
     }
 }
 
 impl From<serde_json::Error> for ResponseError {
     fn from(error: serde_json::Error) -> Self {
-        ResponseError::Json(error)
+        ResponseError::Json(format!("{:?}", error))
     }
+}
+
+fn serialize_io_error<S>(error: &String, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    serializer.serialize_str(error)
+}
+
+fn deserialize_io_error<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    String::deserialize(deserializer)
+}
+
+fn serialize_json_error<S>(error: &String, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    serializer.serialize_str(error)
+}
+
+fn deserialize_json_error<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    String::deserialize(deserializer)
 }
 
 pub trait ResponseTrait {
@@ -53,14 +89,10 @@ pub trait ResponseTrait {
 
 impl ResponseTrait for ResponseHandler {
     async fn file_get_contents(path_name: String) -> Result<ResponseData, ResponseError> {
-        let file = File::open(&path_name)?;
+        let file = File::open(&path_name).map_err(ResponseError::from)?;
 
-        let response_data: ResponseData = match serde_json::from_reader(file) {
-            Ok(data) => data,
-            Err(e) => {
-                return Err(ResponseError::Json(e));
-            }
-        };
+        let response_data: ResponseData =
+            serde_json::from_reader(file).map_err(ResponseError::from)?;
         println!("Data response {:?}", response_data);
 
         Ok(response_data)
