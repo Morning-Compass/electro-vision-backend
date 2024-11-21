@@ -91,9 +91,7 @@ impl ResponseTrait for ResponseHandler {
     async fn file_get_contents(path_name: String) -> Result<ResponseData, ResponseError> {
         let file = File::open(&path_name).map_err(ResponseError::from)?;
 
-        let response_data: ResponseData =
-            serde_json::from_reader(file).map_err(ResponseError::from)?;
-        println!("Data response {:?}", response_data);
+        let response_data = serde_json::from_reader(file).map_err(ResponseError::from)?;
 
         Ok(response_data)
     }

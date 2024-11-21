@@ -16,7 +16,7 @@ mod tests {
         },
         constants::TEST_EMAIL,
         models::User,
-        response_handler::{ResponseHandler, ResponseTrait},
+        response_handler::{self, ResponseData, ResponseHandler, ResponseTrait},
         DBPool, DPool,
     };
     use serde_json::json;
@@ -25,7 +25,7 @@ mod tests {
     use crate::user::UserChangePassword;
     use actix_web::{
         test::{self, TestRequest},
-        web, App, Error, HttpResponse,
+        web, App, Error, HttpResponse, ResponseError,
     };
     use std::str;
 
@@ -165,5 +165,18 @@ mod tests {
             "Unexpected response body: {:?}",
             body_str
         );
+    }
+
+    #[actix_web::test]
+    async fn test_json_response() {
+        use crate::response_handler::ResponseHandler;
+
+        let file = ResponseHandler::file_get_contents("./api-response.json".to_string()).await;
+        match file {
+            Ok(response_handler) => println!("{:?}", response_handler.login_username_success),
+            Err(e) => {
+                eprintln!("Error json_response test {:?}", e);
+            }
+        };
     }
 }
