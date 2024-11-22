@@ -117,7 +117,7 @@ pub async fn login_username(request: Json<RequestLoginUsername>, pool: DPool) ->
         Err(e) => return HttpResponse::InternalServerError().json(("Error: ", e)),
     };
 
-    println!("{:?}", response_handler.login_username_success);
+    // println!("{:?}", response_handler.login_username_success);
 
     let user_username = request.username.clone();
     let user = web::block(move || list_user(LoginMethodIdentifier::Username(user_username), pool))
@@ -126,9 +126,9 @@ pub async fn login_username(request: Json<RequestLoginUsername>, pool: DPool) ->
 
     match user.await {
         Ok(usr) => match bcrypt::verify(&request.password, &usr.password) {
-            Ok(valid) if valid => HttpResponse::Ok()
-                .content_type(APPLICATION_JSON)
-                .json(LoginResponse::new(ResponseUser::new(usr))),
+            Ok(valid) if valid => HttpResponse::Ok().content_type(APPLICATION_JSON).json(
+                serde_json::json!({"status": response_handler.login_username_success.status}),
+            ),
             Ok(_) => HttpResponse::BadRequest()
                 .json(LoginUserError::new("password is incorrect".to_string())),
             Err(_) => HttpResponse::InternalServerError()

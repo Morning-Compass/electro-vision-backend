@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-
+    use crate::constants::*;
     use diesel::{
         r2d2::{self, ConnectionManager},
         PgConnection,
@@ -168,15 +168,37 @@ mod tests {
     }
 
     #[actix_web::test]
-    async fn test_json_response() {
-        use crate::response_handler::ResponseHandler;
+    async fn login_username() {
+        use crate::auth::login::login::{login_username, RequestLoginUsername};
 
-        let file = ResponseHandler::file_get_contents("./api-response.json".to_string()).await;
-        match file {
-            Ok(response_handler) => println!("{:?}", response_handler.login_username_success),
-            Err(e) => {
-                eprintln!("Error json_response test {:?}", e);
-            }
+        let req_data = RequestLoginUsername {
+            username: TEST_USERNAME.to_string(),
+            password: TEST_PASSWORD.to_string(),
         };
+
+        let pool = setup_pool();
+        let mut app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(pool.clone()))
+                .service(login_username), // here instead of making it a request we call on the endpoint function, so that it calls the function not some helper
+        )
+        .await;
+
+        let req = test::TestRequest::put()
+            .uri("/change-password")
+            .set_json(req_data)
+            .to_request();
+
+        let resp = test::call_service(&mut app, req).await; // call the premade app variable and the request (req) and call upon the endpoint it self
+        assert!(resp.status().is_success(), "Password change request failed");
+
+        let body = test::read_body(resp).await;
+
+        let body_str = str::from_utf8(&body).expect("Failed to convert body to string");
+        assert!(
+            body_str.contains(r#""user password changed""#),
+            "Unexpected response body: {:?}",
+            body_str
+        );
     }
 }
