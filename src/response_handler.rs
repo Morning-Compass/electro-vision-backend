@@ -90,9 +90,13 @@ pub trait ResponseTrait {
 impl ResponseTrait for ResponseHandler {
     async fn file_get_contents(path_name: String) -> Result<ResponseData, ResponseError> {
         let file = File::open(&path_name).map_err(ResponseError::from)?;
-
-        let response_data = serde_json::from_reader(file).map_err(ResponseError::from)?;
-
+        let response_data: ResponseData = match serde_json::from_reader(file) {
+            Ok(data) => data,
+            Err(e) => {
+                return Err(ResponseError::Json(e.to_string()));
+            }
+        };
+        // println!("Data response {:?}", response_data);
         Ok(response_data)
     }
 }

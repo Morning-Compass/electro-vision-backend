@@ -105,9 +105,6 @@ pub async fn change_password(request: Json<UserChangePassword>, pool: DPool) -> 
             }));
         }
     };
-
-    //println!("Content of file: {:?}", contents);
-
     let conn = &mut est_conn(pool);
 
     let new_password = HashPassword::hash_password(request.password.to_string()).await;
