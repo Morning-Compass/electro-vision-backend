@@ -130,12 +130,17 @@ pub async fn login_username(mut request: Json<RequestLoginUsername>, pool: DPool
     match user.await {
         Ok(usr) => match bcrypt::verify(&request.password, &usr.password) {
             Ok(valid) if valid => HttpResponse::Ok().content_type(APPLICATION_JSON).json(
-                serde_json::json!({"status": response_handler.login_username_success.status}),
+                serde_json::json!({"status": response_handler.login_username_success.status,
+                    "message": response_handler.login_username_success.message}),
             ),
-            Ok(_) => HttpResponse::BadRequest()
-                .json(LoginUserError::new("password is incorrect".to_string())),
-            Err(_) => HttpResponse::InternalServerError()
-                .json(LoginUserError::new("Failed to verify password".to_string())),
+            Ok(_) => HttpResponse::BadRequest().content_type(APPLICATION_JSON).json(
+                serde_json::json!({"status": response_handler.login_username_client_error.status,
+                    "message": response_handler.login_username_client_error.message}),
+            ),
+            Err(_) => HttpResponse::InternalServerError().content_type(APPLICATION_JSON).json(
+                serde_json::json!({"status": response_handler.login_username_server_error.status,
+                    "message": response_handler.login_username_server_error.message}),
+            ),
         },
         Err(Error::NotFound) => {
             eprintln!("User with provided username was not found");
@@ -155,6 +160,14 @@ pub async fn login_username(mut request: Json<RequestLoginUsername>, pool: DPool
 
 #[post("/login-email")]
 pub async fn login_email(request: Json<RequestLoginEmail>, pool: DPool) -> HttpResponse {
+    use crate::response_handler::ResponseHandler;
+
+    let file = ResponseHandler::file_get_contents("./api-response.json".to_string()).await;
+    let response_handler = match file {
+        Ok(response_handler) => response_handler,
+        Err(e) => return HttpResponse::InternalServerError().json(("Error: ", e)),
+    };
+
     let user_email = request.email.clone();
     let user = web::block(move || list_user(LoginMethodIdentifier::Email(user_email), pool))
         .await
@@ -162,9 +175,10 @@ pub async fn login_email(request: Json<RequestLoginEmail>, pool: DPool) -> HttpR
 
     match user.await {
         Ok(usr) => match bcrypt::verify(&request.password, &usr.password) {
-            Ok(valid) if valid => HttpResponse::Ok()
-                .content_type(APPLICATION_JSON)
-                .json(LoginResponse::new(ResponseUser::new(usr))),
+            Ok(valid) if valid => HttpResponse::Ok().content_type(APPLICATION_JSON).json(
+                serde_json::json!({"status": response_handler.email_resend_success.status,
+                    "messege": response_handler.email_resend_success.message}),
+            ),
             Ok(_) => HttpResponse::BadRequest()
                 .json(LoginUserError::new("password is incorrect".to_string())),
             Err(_) => HttpResponse::InternalServerError()
