@@ -143,17 +143,20 @@ pub async fn login_username(mut request: Json<RequestLoginUsername>, pool: DPool
             ),
         },
         Err(Error::NotFound) => {
-            eprintln!("User with provided username was not found");
-            HttpResponse::NotFound().json(LoginUserError::new(format!(
-                "User with username {} was not found",
-                request.username,
-            )))
-        }
+            // eprintln!("User with provided username was not found");
+            HttpResponse::NotFound().content_type(APPLICATION_JSON).json(
+                serde_json::json!({"status": response_handler.login_username_client_error.status,
+                    "messege": response_handler.login_username_client_error.message}),
+            )
+        },
         Err(e) => {
-            eprintln!("Error matching users in login_username {:?}", e);
-            HttpResponse::InternalServerError().json(LoginUserError {
-                response: "Error ".to_string(),
-            })
+            // eprintln!("Error matching users in login_username {:?}", e);
+            HttpResponse::InternalServerError().content_type(APPLICATION_JSON).json(
+                serde_json::json!({"status": response_handler.login_username_client_error.status,
+                    "messege": response_handler.login_username_client_error.message,
+                    "error": format!("{:?}", e)
+                }),
+            )
         }
     }
 }
@@ -179,23 +182,30 @@ pub async fn login_email(request: Json<RequestLoginEmail>, pool: DPool) -> HttpR
                 serde_json::json!({"status": response_handler.email_resend_success.status,
                     "messege": response_handler.email_resend_success.message}),
             ),
-            Ok(_) => HttpResponse::BadRequest()
-                .json(LoginUserError::new("password is incorrect".to_string())),
-            Err(_) => HttpResponse::InternalServerError()
-                .json(LoginUserError::new("Failed to verify password".to_string())),
+            Ok(_) => HttpResponse::BadRequest().content_type(APPLICATION_JSON).json(
+                serde_json::json!({"status": response_handler.login_username_client_error.status,
+                    "messege": response_handler.login_username_client_error.message})
+            ),
+            Err(_) => HttpResponse::InternalServerError().content_type(APPLICATION_JSON).json(
+                serde_json::json!({"status": response_handler.login_username_client_error.status,
+                    "messege": response_handler.login_username_client_error.message}),
+            ),
         },
         Err(Error::NotFound) => {
-            eprintln!("User with provided email was not found");
-            HttpResponse::NotFound().json(LoginUserError::new(format!(
-                "User with email {} was not found",
-                request.email,
-            )))
-        }
+            // eprintln!("User with provided email was not found");
+            HttpResponse::NotFound().content_type(APPLICATION_JSON).json(
+                serde_json::json!({"status": response_handler.login_username_client_error.status,
+                    "messege": response_handler.login_username_client_error.message}),
+            )
+        },
         Err(e) => {
-            eprintln!("Error matching users in login_username {:?}", e);
-            HttpResponse::InternalServerError().json(LoginUserError {
-                response: "Error ".to_string(),
-            })
+            // eprintln!("Error matching users in login_username {:?}", e);
+            HttpResponse::InternalServerError().content_type(APPLICATION_JSON).json(
+                serde_json::json!({"status": response_handler.login_username_client_error.status,
+                    "messege": response_handler.login_username_client_error.message,
+                    "error": format!("{:?}", e)
+                }),
+            )
         }
     }
 }
