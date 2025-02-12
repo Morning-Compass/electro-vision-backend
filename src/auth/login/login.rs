@@ -1,4 +1,6 @@
 use crate::auth::jwt::generate;
+use crate::auth::ResponseUser;
+use crate::auth::UserWithRoles;
 use crate::constants::APPLICATION_JSON;
 use crate::models::User;
 use crate::{est_conn, response, schema, DPool};
@@ -14,57 +16,6 @@ type LoginResponse = response::Response<ResponseUser>;
 pub enum LoginMethodIdentifier {
     Username(String),
     Email(String),
-}
-#[derive(Debug, Serialize, Deserialize)]
-pub struct UserWithRoles {
-    id: i32,
-    username: String,
-    password: String,
-    email: String,
-    created_at: NaiveDateTime,
-    account_valid: bool,
-    roles: Vec<String>,
-    token: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct ResponseUser {
-    id: i32,
-    username: String,
-    email: String,
-    created_at: NaiveDateTime,
-    account_valid: bool,
-    roles: Vec<String>,
-    token: String,
-}
-
-impl UserWithRoles {
-    pub fn new(user: User, roles: Vec<String>, token: String) -> Self {
-        Self {
-            id: user.id,
-            username: user.username,
-            email: user.email,
-            password: user.password,
-            created_at: user.created_at,
-            account_valid: user.account_valid,
-            roles,
-            token,
-        }
-    }
-}
-
-impl ResponseUser {
-    fn new(user: UserWithRoles) -> Self {
-        Self {
-            id: user.id,
-            username: user.username,
-            email: user.email,
-            created_at: user.created_at,
-            account_valid: user.account_valid,
-            roles: user.roles,
-            token: user.token,
-        }
-    }
 }
 
 #[derive(Deserialize)]
@@ -111,8 +62,8 @@ pub async fn list_user(
     let token = match generate(&usr.email) {
         Ok(t) => t,
         Err(_) => {
-            eprintln!( "Error generating jwt");
-            return Err(Error::NotFound)
+            eprintln!("Error generating jwt");
+            return Err(Error::NotFound);
         }
     };
     Ok(UserWithRoles::new(usr, user_roles_result, token))

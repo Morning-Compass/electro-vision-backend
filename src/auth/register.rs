@@ -8,10 +8,12 @@ use serde_derive::Deserialize;
 use auth::confirmation_token::token::ConfirmationToken;
 
 use crate::auth::confirmation_token::token::Cft;
+use crate::auth::jwt::generate;
+use crate::auth::{response_user, ResponseUser, UserWithRoles};
 use crate::models::User;
 use crate::response::JsonResponse;
 use crate::user::NoIdUser;
-use crate::{auth, est_conn, DPool, ResponseKeys};
+use crate::{auth, est_conn, schema, DPool, ResponseKeys};
 
 #[derive(Deserialize, Clone)]
 struct RegisterRequest {
@@ -85,6 +87,11 @@ pub struct RegisterJsonResponse {
     err_email_exists_value: String,
 }
 
+pub struct OkResponse {
+    message: String,
+    user: ResponseUser,
+}
+
 #[post("/register")]
 pub async fn register(
     request: Json<RegisterRequest>,
@@ -113,15 +120,18 @@ pub async fn register(
 
     match registered_user.await {
         Ok(usr) => {
+            let usrclone = usr.clone();
+            let email_clone = usr.email.clone();
+            let username_clone = usr.username.clone();
             match (
-                insert_user_roles(usr.id, pool.clone()).await,
+                insert_user_roles(usrclone.id, pool.clone()).await,
                 <Cft as ConfirmationToken>::new(request.email.clone(), false, pool.clone()),
             ) {
                 (Ok(_), Ok(tok)) => {
                     use crate::auth::auth_error::VerificationTokenError;
                     match <Cft as ConfirmationToken>::send(
-                        usr.username,
-                        usr.email,
+                        username_clone, // `username` is moved here
+                        email_clone,    // Use the cloned `email`
                         pool.clone(),
                         auth::confirmation_token::token::TokenEmailType::AccountVerification,
                         Some(tok),
@@ -130,7 +140,27 @@ pub async fn register(
                     .await
                     {
                         Ok(_) => {
-                            HttpResponse::Ok().json(JsonResponse::new(keys.ok_key, keys.ok_value))
+                            let email = usr.email.clone();
+                            let token = match generate(&email) {
+                                Ok(t) => t,
+                                Err(_) => {
+                                    eprintln!("Error generating jwt");
+                                    return HttpResponse::InternalServerError()
+                                        .json("Error generating jwt");
+                                }
+                            };
+
+                            let user_roles_result = schema::user_roles::table
+                                .inner_join(schema::roles::table)
+                                .filter(schema::user_roles::user_id.eq(usr.id))
+                                .select(schema::roles::name)
+                                .load::<String>(&mut est_conn(pool))
+                                .unwrap_or_else(|_| vec![]);
+                            HttpResponse::Ok().json(ResponseUser::new(UserWithRoles::new(
+                                usr,
+                                user_roles_result,
+                                token,
+                            )))
                         }
                         Err(e) => match e {
                             VerificationTokenError::NotFound => HttpResponse::BadRequest()
