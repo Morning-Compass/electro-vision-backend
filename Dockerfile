@@ -1,4 +1,4 @@
-FROM rust:1.81-slim-bullseye
+FROM rust:1.82-slim-bullseye
 
 RUN apt-get update -y && \
     apt-get upgrade -y

@@ -31,7 +31,7 @@ CREATE TABLE users (
 -- Create the user_roles table (with foreign key references to users and roles)
 CREATE TABLE user_roles (
     user_id INT NOT NULL,
-    role_id SMALLINT NOT NULL,
+    role_id SERIAL NOT NULL,
     PRIMARY KEY (user_id, role_id),
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
     FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE

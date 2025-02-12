@@ -47,22 +47,30 @@ pub async fn insert_user(new_user: NoIdUser, pool: DPool) -> Result<User, Error>
 }
 
 pub async fn insert_user_roles(usr_id: i32, pool: DPool) -> Result<String, Error> {
-    use crate::schema::roles::dsl::{name as role_name, roles};
+    use crate::schema::roles::dsl::{id, name, roles};
     use crate::schema::user_roles::dsl::*;
     let mut conn = est_conn(pool);
 
-    let role_id_value: i16 = roles
-        .filter(role_name.eq("USER"))
-        .select(crate::schema::roles::dsl::id)
-        .first::<i16>(&mut conn)?;
+    println!("uid {}", usr_id);
+
+    let role_id_value = roles
+        .filter(name.eq("USER"))
+        .select(id)
+        .first::<i32>(&mut conn)?;
+
+    println!("\n\n\n\n helo \n\n\n\n");
 
     match diesel::insert_into(user_roles)
+        //.values((user_id.eq(usr_id), role_id.eq(role_id_value)))
         .values((user_id.eq(usr_id), role_id.eq(role_id_value)))
         .execute(&mut conn)
     {
         Ok(_) => Ok("User role assigned successfully".to_string()),
         Err(e) => {
-            eprintln!("Error inserting user_roles: {:?}", e);
+            eprintln!(
+                "Error inserting user_roles while registration okay bruv : {:?}",
+                e
+            );
             Err(e)
         }
     }
@@ -135,8 +143,9 @@ pub async fn register(
                                 HttpResponse::BadRequest().json("Token has expired".to_string())
                             }
                             VerificationTokenError::ServerError(_) => {
+                                eprintln!("{:?}", e);
                                 HttpResponse::InternalServerError()
-                                    .json("Server error while veryfing account".to_string())
+                                    .json("Server error while veryfing account")
                             }
                             VerificationTokenError::TokenAlreadyExists => {
                                 HttpResponse::BadRequest().json("Verification token already exists")
@@ -145,7 +154,10 @@ pub async fn register(
                     }
                 }
                 (Err(e), _) => {
-                    eprintln!("Error inserting user roles: {:?}", e);
+                    eprintln!(
+                        "Error inserting user roles while registration brumv: {:?}",
+                        e
+                    );
                     HttpResponse::InternalServerError().json(JsonResponse::new(
                         keys.err_internal_key,
                         keys.err_internal_value,

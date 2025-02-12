@@ -102,6 +102,7 @@ async fn main() -> std::io::Result<()> {
     {
         let conn_pool = pool.clone();
         let data_pool = Data::new(conn_pool);
+        // for first start comment inserting test data
         if let Err(err) = insert_test_data(data_pool).await {
             eprintln!("Failed to insert test data: {:?}", err);
             return Err(std::io::Error::new(
