@@ -60,8 +60,6 @@ pub async fn insert_user_roles(usr_id: i32, pool: DPool) -> Result<String, Error
         .select(id)
         .first::<i32>(&mut conn)?;
 
-    println!("\n\n\n\n helo \n\n\n\n");
-
     match diesel::insert_into(user_roles)
         //.values((user_id.eq(usr_id), role_id.eq(role_id_value)))
         .values((user_id.eq(usr_id), role_id.eq(role_id_value)))

@@ -36,7 +36,7 @@ services:
     depends_on:
       - db
     command: >
-      bash -c "diesel setup; diesel migration generate users; chmod +x migration-script.sh; sh ./migration-script.sh; diesel migration run; diesel migration redo; cargo run"
+      bash -c "diesel setup; diesel migration generate users; chmod +x migration-script.sh; bash ./migration-script.sh; diesel migration run; diesel migration redo; cargo run"
     networks:
       - morning-compass-network
 
