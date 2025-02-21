@@ -30,8 +30,12 @@ destination_down_file="$migration_folder/down.sql"
 cp "$schema_up_file" "$destination_up_file"
 cp "$schema_down_file" "$destination_down_file"
 
-cat schema_up_file
-cat schema_down_file
+# List files in /app and /app/migrations
+ls -l /app /app/migrations/
+
+# Display the content of schema files
+cat "$schema_up_file"
+cat "$schema_down_file"
 
 echo "Schema files have been copied to the migration folder:"
 echo "  - '$destination_up_file'"
