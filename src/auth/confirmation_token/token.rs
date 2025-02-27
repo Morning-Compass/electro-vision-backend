@@ -23,7 +23,7 @@ pub enum TokenEmailType {
     AccountVerificationResend,
 }
 
-pub enum ConfirmationTokenType {
+pub enum TokenType {
     AccountVerification,
     PasswordReset,
 }
@@ -39,7 +39,7 @@ pub trait ConfirmationToken {
     fn new(
         email: String,
         resend: bool,
-        token_type: ConfirmationTokenType,
+        token_type: TokenType,
         pool: DPool,
     ) -> Result<String, VerificationTokenError>;
     fn confirm(token: String, pool: DPool) -> Result<String, VerificationTokenError>;
@@ -57,15 +57,18 @@ impl ConfirmationToken for Cft {
     fn new(
         u_email: String,
         resend: bool,
-        token_type: ConfirmationTokenType,
+        token_type: TokenType,
         pool: DPool,
     ) -> Result<String, VerificationTokenError> {
         let mut token_exists: bool = false;
 
+        use crate::schema::confirmation_tokens::dsl as ct_table;
+        use crate::schema::password_reset_tokens::dsl as psr_table;
+        use schema::confirmation_tokens as ct_data;
+        use schema::password_reset_tokens as psr_data;
+
         match token_type {
-            ConfirmationTokenType::AccountVerification => {
-                use crate::schema::confirmation_tokens::dsl as ct_table;
-                use schema::confirmation_tokens as ct_data;
+            TokenType::AccountVerification => {
                 if !resend {
                     token_exists = diesel::select(exists(
                         ct_table::confirmation_tokens.filter(ct_data::user_email.eq(&u_email)),
@@ -78,9 +81,7 @@ impl ConfirmationToken for Cft {
                     })?;
                 }
             }
-            ConfirmationTokenType::PasswordReset => {
-                use crate::schema::password_reset_tokens::dsl as psr_table;
-                use schema::password_reset_tokens as psr_data;
+            TokenType::PasswordReset => {
                 if !resend {
                     token_exists = diesel::select(exists(
                         psr_table::password_reset_tokens.filter(psr_data::user_email.eq(&u_email)),
@@ -115,19 +116,39 @@ impl ConfirmationToken for Cft {
 
         let token_to_return = ctoken.token.clone();
 
-        match diesel::insert_into(confirmation_tokens)
-            .values((
-                user_email.eq(ctoken.user_email),
-                token.eq(ctoken.token),
-                created_at.eq(ctoken.created_at),
-                expires_at.eq(ctoken.expires_at),
-            ))
-            .execute(&mut est_conn(pool))
-        {
-            Ok(_) => Ok(token_to_return),
-            Err(_) => Err(VerificationTokenError::ServerError(
-                VerificationTokenServerError::TokenInsertionError,
-            )),
+        match token_type {
+            TokenType::AccountVerification => {
+                match diesel::insert_into(ct_table::confirmation_tokens)
+                    .values((
+                        ct_data::user_email.eq(ctoken.user_email),
+                        ct_data::token.eq(ctoken.token),
+                        ct_data::created_at.eq(ctoken.created_at),
+                        ct_data::expires_at.eq(ctoken.expires_at),
+                    ))
+                    .execute(&mut est_conn(pool))
+                {
+                    Ok(_) => Ok(token_to_return),
+                    Err(_) => Err(VerificationTokenError::ServerError(
+                        VerificationTokenServerError::TokenInsertionError,
+                    )),
+                }
+            }
+            TokenType::PasswordReset => {
+                match diesel::insert_into(psr_table::password_reset_tokens)
+                    .values((
+                        psr_data::user_email.eq(ctoken.user_email),
+                        psr_data::token.eq(ctoken.token),
+                        psr_data::created_at.eq(ctoken.created_at),
+                        psr_data::expires_at.eq(ctoken.expires_at),
+                    ))
+                    .execute(&mut est_conn(pool))
+                {
+                    Ok(_) => Ok(token_to_return),
+                    Err(_) => Err(VerificationTokenError::ServerError(
+                        VerificationTokenServerError::TokenInsertionError,
+                    )),
+                }
+            }
         }
     }
 
