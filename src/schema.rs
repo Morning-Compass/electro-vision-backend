@@ -1,6 +1,17 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    password_reset_tokens(id) {
+        id -> Int4,
+        user_email -> Varchar,
+        token -> Varchar,
+        created_at -> Timestamp,
+        expires_at -> Timestamp,
+        confirmed_at -> Nullable<Timestamp>,
+    }
+}
+
+diesel::table! {
     confirmation_tokens (id) {
         id -> Int4,
         user_email -> Varchar,
@@ -44,4 +55,5 @@ diesel::allow_tables_to_appear_in_same_query!(
     roles,
     user_roles,
     users,
+    password_reset_tokens
 );

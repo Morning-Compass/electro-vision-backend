@@ -14,6 +14,15 @@ CREATE TABLE IF NOT EXISTS confirmation_tokens (
     confirmed_at TIMESTAMP NULL
 );
 
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id SERIAL PRIMARY KEY,
+    user_email VARCHAR NOT NULL,
+    token VARCHAR NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    confirmed_at TIMESTAMP NULL
+);
+
 -- Create users table
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,

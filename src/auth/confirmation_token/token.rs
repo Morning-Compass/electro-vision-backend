@@ -13,14 +13,19 @@ use lettre::Transport;
 
 use crate::auth::auth_error::{VerificationTokenError, VerificationTokenServerError};
 use crate::emails::{email_body_generator, EmailType};
-use crate::schema::confirmation_tokens;
 use crate::schema::users::account_valid;
+use crate::schema::{confirmation_tokens, password_reset_tokens};
 use crate::{constants::CONFIRMATION_TOKEN_EXIPIRATION_TIME, est_conn, DPool};
 use crate::{models, schema};
 
 pub enum TokenEmailType {
     AccountVerification,
     AccountVerificationResend,
+}
+
+pub enum ConfirmationTokenType {
+    AccountVerification,
+    PasswordReset,
 }
 
 pub struct Cft {
@@ -31,7 +36,12 @@ pub struct Cft {
 }
 
 pub trait ConfirmationToken {
-    fn new(email: String, resend: bool, pool: DPool) -> Result<String, VerificationTokenError>;
+    fn new(
+        email: String,
+        resend: bool,
+        token_type: ConfirmationTokenType,
+        pool: DPool,
+    ) -> Result<String, VerificationTokenError>;
     fn confirm(token: String, pool: DPool) -> Result<String, VerificationTokenError>;
     async fn send(
         username: String,
@@ -44,21 +54,49 @@ pub trait ConfirmationToken {
 }
 
 impl ConfirmationToken for Cft {
-    fn new(u_email: String, resend: bool, pool: DPool) -> Result<String, VerificationTokenError> {
-        use crate::schema::confirmation_tokens::dsl::*;
+    fn new(
+        u_email: String,
+        resend: bool,
+        token_type: ConfirmationTokenType,
+        pool: DPool,
+    ) -> Result<String, VerificationTokenError> {
+        let mut token_exists: bool = false;
 
-        if !resend {
-            let token_exists = diesel::select(exists(
-                confirmation_tokens.filter(schema::confirmation_tokens::user_email.eq(&u_email)),
-            ))
-            .get_result::<bool>(&mut est_conn(pool.clone()))
-            .map_err(|_| {
-                VerificationTokenError::ServerError(VerificationTokenServerError::DatabaseError)
-            })?;
-
-            if token_exists {
-                return Err(VerificationTokenError::TokenAlreadyExists);
+        match token_type {
+            ConfirmationTokenType::AccountVerification => {
+                use crate::schema::confirmation_tokens::dsl as ct_table;
+                use schema::confirmation_tokens as ct_data;
+                if !resend {
+                    token_exists = diesel::select(exists(
+                        ct_table::confirmation_tokens.filter(ct_data::user_email.eq(&u_email)),
+                    ))
+                    .get_result::<bool>(&mut est_conn(pool.clone()))
+                    .map_err(|_| {
+                        VerificationTokenError::ServerError(
+                            VerificationTokenServerError::DatabaseError,
+                        )
+                    })?;
+                }
             }
+            ConfirmationTokenType::PasswordReset => {
+                use crate::schema::password_reset_tokens::dsl as psr_table;
+                use schema::password_reset_tokens as psr_data;
+                if !resend {
+                    token_exists = diesel::select(exists(
+                        psr_table::password_reset_tokens.filter(psr_data::user_email.eq(&u_email)),
+                    ))
+                    .get_result::<bool>(&mut est_conn(pool.clone()))
+                    .map_err(|_| {
+                        VerificationTokenError::ServerError(
+                            VerificationTokenServerError::DatabaseError,
+                        )
+                    })?;
+                }
+            }
+        }
+
+        if token_exists {
+            return Err(VerificationTokenError::TokenAlreadyExists);
         }
 
         let ctoken = Cft {
