@@ -11,6 +11,11 @@ use lettre::message::{MultiPart, SinglePart};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::Transport;
 
+use crate::schema::confirmation_tokens::dsl as ct_table;
+use crate::schema::password_reset_tokens::dsl as psr_table;
+use schema::confirmation_tokens as ct_data;
+use schema::password_reset_tokens as psr_data;
+
 use crate::auth::auth_error::{VerificationTokenError, VerificationTokenServerError};
 use crate::emails::{email_body_generator, EmailType};
 use crate::schema::users::account_valid;
@@ -42,7 +47,11 @@ pub trait ConfirmationToken {
         token_type: TokenType,
         pool: DPool,
     ) -> Result<String, VerificationTokenError>;
-    fn confirm(token: String, pool: DPool) -> Result<String, VerificationTokenError>;
+    fn confirm(
+        token: String,
+        token_type: TokenType,
+        pool: DPool,
+    ) -> Result<String, VerificationTokenError>;
     async fn send(
         username: String,
         email: String,
@@ -61,11 +70,6 @@ impl ConfirmationToken for Cft {
         pool: DPool,
     ) -> Result<String, VerificationTokenError> {
         let mut token_exists: bool = false;
-
-        use crate::schema::confirmation_tokens::dsl as ct_table;
-        use crate::schema::password_reset_tokens::dsl as psr_table;
-        use schema::confirmation_tokens as ct_data;
-        use schema::password_reset_tokens as psr_data;
 
         match token_type {
             TokenType::AccountVerification => {
@@ -152,15 +156,31 @@ impl ConfirmationToken for Cft {
         }
     }
 
-    fn confirm(_token: String, pool: DPool) -> Result<String, VerificationTokenError> {
+    fn confirm(
+        _token: String,
+        token_type: TokenType,
+        pool: DPool,
+    ) -> Result<String, VerificationTokenError> {
         use crate::schema::confirmation_tokens::dsl::*;
         let mut conn = est_conn(pool);
 
-        let db_token = match confirmation_tokens
+        //Result<Option<ConfirmationToken>, Error>
+        trait AllowedTokens {}
+        impl AllowedTokens for ct_table::confirmation_tokens {}
+        impl AllowedTokens for psr_table::password_reset_tokens {}
+
+        struct Token<T>
+        where
+            T: AllowedTokens,
+        {
+            inner: Result<Option<T>, diesel::result::Error>,
+        }
+
+        let db_token = confirmation_tokens
             .filter(token.eq(&_token))
             .first::<models::ConfirmationToken>(&mut conn)
-            .optional()
-        {
+            .optional();
+        match db_token {
             Ok(Some(tok)) => {
                 if tok.confirmed_at.is_some() {
                     return Err(VerificationTokenError::AccountAlreadyVerified);
