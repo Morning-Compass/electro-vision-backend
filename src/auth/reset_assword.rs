@@ -99,13 +99,14 @@ pub async fn reset_password(pool: DPool, request: Json<ResetPasswordRequest>) ->
         Err(e) => match e {
             VerificationTokenError::NotFound => HttpResponse::BadRequest().json("Token not found"),
             VerificationTokenError::Expired => HttpResponse::BadRequest().json("Token expired"),
-            VerificationTokenError::Account(AccountVerification::AccountAlreadyVerified) => {
-                HttpResponse::BadRequest().json("Account already veryfied")
-            }
             VerificationTokenError::TokenAlreadyExists => {
                 HttpResponse::BadRequest().json("Token already exists")
             }
             VerificationTokenError::ServerError(_) => {
+                HttpResponse::InternalServerError().json("An unexpected error occured".to_string())
+            }
+            // any other error can not ocurr due to password not being account
+            _ => {
                 HttpResponse::InternalServerError().json("An unexpected error occured".to_string())
             }
         },
