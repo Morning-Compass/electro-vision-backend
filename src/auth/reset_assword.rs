@@ -5,7 +5,10 @@ use diesel::{ExpressionMethods, RunQueryDsl};
 use serde::Deserialize;
 
 use crate::auth::auth_error::AccountVerification;
+use crate::auth::confirmation_token::token::TokenEmailType;
+use crate::auth::find_user::Find;
 use crate::est_conn;
+use crate::models::User;
 use crate::schema::users as user_data;
 use crate::schema::users::dsl as user_table;
 
@@ -19,20 +22,21 @@ use crate::{
 };
 
 use super::confirmation_token::token::ConfirmationToken;
+use super::find_user::FindData;
 
 #[derive(Deserialize)] // Add Deserialize
-pub struct EmailResetPasswordRequest {
+struct EmailResetPasswordRequest {
     new_password: String,
     email: String,
 }
 
 #[derive(Deserialize)] // Add Deserialize
-pub struct ResetPasswordRequest {
+struct ResetPasswordRequest {
     email: String,
 }
 
 #[derive(Deserialize)]
-pub struct Token {
+struct Token {
     token: String,
 }
 
@@ -89,12 +93,24 @@ pub async fn email_reset_password(
 
 #[post("/reset_password")]
 pub async fn reset_password(pool: DPool, request: Json<ResetPasswordRequest>) -> HttpResponse {
-    match <Cft as ConfirmationToken>::new(
+    let pool_clone = pool.clone();
+    let user: User =
+        match <FindData as Find>::find_by_email(request.email.clone(), pool_clone).await {
+            Ok(u) => u,
+            Err(_) => return HttpResponse::InternalServerError().json("Unknown error"),
+        };
+
+    match <Cft as ConfirmationToken>::send(
+        user.username,
         request.email.clone(),
+        pool.clone(),
+        TokenEmailType::PasswordReset,
+        None,
         false,
         TokenType::PasswordReset(request.email.clone()),
-        pool,
-    ) {
+    )
+    .await
+    {
         Ok(_) => HttpResponse::Ok().json("Email send with verification link"),
         Err(e) => match e {
             VerificationTokenError::NotFound => HttpResponse::BadRequest().json("Token not found"),
