@@ -3,6 +3,7 @@ use diesel::deserialize;
 use serde::Deserialize;
 
 use crate::{
+    auth::confirmation_token::token::TokenType,
     models::{self, User},
     DPool,
 };
@@ -33,6 +34,7 @@ pub async fn resend_verification_email(
                 crate::auth::confirmation_token::token::TokenEmailType::AccountVerificationResend,
                 None,
                 true,
+                TokenType::AccountVerification,
             )
             .await
             {

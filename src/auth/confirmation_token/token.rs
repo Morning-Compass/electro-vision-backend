@@ -11,6 +11,7 @@ use lettre::message::{MultiPart, SinglePart};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::Transport;
 
+use crate::constants::SMTP;
 use crate::schema::confirmation_tokens::dsl as ct_table;
 use crate::schema::password_reset_tokens::dsl as psr_table;
 use schema::confirmation_tokens as ct_data;
@@ -26,6 +27,8 @@ use crate::{models, schema};
 pub enum TokenEmailType {
     AccountVerification,
     AccountVerificationResend,
+    PasswordReset,
+    PasswordResetResend,
 }
 
 pub enum TokenType {
@@ -59,6 +62,7 @@ pub trait ConfirmationToken {
         email_type: TokenEmailType,
         token: Option<String>,
         resend: bool,
+        token_type: TokenType,
     ) -> Result<String, VerificationTokenError>;
 }
 
@@ -164,24 +168,33 @@ impl ConfirmationToken for Cft {
         use crate::schema::confirmation_tokens::dsl::*;
         let mut conn = est_conn(pool);
 
-        //Result<Option<ConfirmationToken>, Error>
-        trait AllowedTokens {}
-        impl AllowedTokens for ct_table::confirmation_tokens {}
-        impl AllowedTokens for psr_table::password_reset_tokens {}
-
-        struct Token<T>
-        where
-            T: AllowedTokens,
-        {
-            inner: Result<Option<T>, diesel::result::Error>,
+        enum UnifiedToken {
+            Confirmation(models::ConfirmationToken),
+            PasswordReset(models::PasswordResetTokens),
         }
 
-        let db_token = confirmation_tokens
-            .filter(token.eq(&_token))
-            .first::<models::ConfirmationToken>(&mut conn)
-            .optional();
+        type Token = Result<Option<UnifiedToken>, diesel::result::Error>;
+
+        let db_token: Token = match token_type {
+            TokenType::AccountVerification => ct_table::confirmation_tokens
+                .filter(ct_data::token.eq(&_token))
+                .first::<models::ConfirmationToken>(&mut conn)
+                .optional()
+                .map(|opt| opt.map(UnifiedToken::Confirmation)),
+            TokenType::PasswordReset => psr_table::password_reset_tokens
+                .filter(psr_data::token.eq(&_token))
+                .first::<models::PasswordResetTokens>(&mut conn)
+                .optional()
+                .map(|opt| opt.map(UnifiedToken::PasswordReset)),
+        };
+
+        match token_type {
+            TokenType::AccountVerification => {}
+            TokenType::PasswordReset => {}
+        }
+
         match db_token {
-            Ok(Some(tok)) => {
+            Ok(Some(UnifiedToken::Confirmation(tok))) => {
                 if tok.confirmed_at.is_some() {
                     return Err(VerificationTokenError::AccountAlreadyVerified);
                 }
@@ -192,13 +205,12 @@ impl ConfirmationToken for Cft {
                     Err(VerificationTokenError::Expired)
                 } else {
                     match diesel::update(
-                        schema::confirmation_tokens::dsl::confirmation_tokens
-                            .filter(schema::confirmation_tokens::dsl::token.eq(tok.token.clone())),
+                        ct_table::confirmation_tokens.filter(ct_data::token.eq(tok.token.clone())),
                     )
-                    .set(schema::confirmation_tokens::confirmed_at.eq(Utc::now().naive_utc()))
+                    .set(ct_data::confirmed_at.eq(Utc::now().naive_utc()))
                     .execute(&mut conn)
                     {
-                        Ok(_) => Ok(tok),
+                        Ok(_) => Ok("Account verified".to_string()),
                         Err(e) => {
                             eprintln!("Error updating token verified status: {:?}", e);
                             Err(VerificationTokenError::ServerError(
@@ -208,34 +220,35 @@ impl ConfirmationToken for Cft {
                     }
                 }
             }
+            Ok(Some(UnifiedToken::PasswordReset(tok))) => {
+                let current_time = Utc::now().naive_utc();
+                if current_time - Duration::seconds(CONFIRMATION_TOKEN_EXIPIRATION_TIME)
+                    > tok.created_at
+                {
+                    return Err(VerificationTokenError::Expired);
+                }
+                match diesel::delete(psr_table::password_reset_tokens)
+                    .filter(psr_data::token.eq(tok.token))
+                    .execute(&mut conn)
+                    .map_err(|e| {
+                        eprintln!("Error deleting used token: {e}");
+                        VerificationTokenError::ServerError(
+                            VerificationTokenServerError::DatabaseError,
+                        )
+                    }) {
+                    Ok(_) => Ok("Token validated and consumed"),
+                    Err(_) => Err(VerificationTokenServerError::DatabaseError),
+                };
+
+                Ok("Password reset token valid".to_string())
+            }
             Ok(None) => Err(VerificationTokenError::NotFound),
             Err(e) => {
-                eprintln!(
-                    "Database error while chcking if token already exists {:?}",
-                    e
-                );
+                eprintln!("Database error while checking token: {:?}", e);
                 Err(VerificationTokenError::ServerError(
-                    VerificationTokenServerError::TokenGenerationError,
+                    VerificationTokenServerError::DatabaseError,
                 ))
             }
-        };
-
-        match db_token {
-            Ok(_) => {
-                match diesel::update(
-                    schema::users::dsl::users
-                        .filter(schema::users::dsl::email.eq(db_token.unwrap().user_email)),
-                )
-                .set(account_valid.eq(true))
-                .execute(&mut conn)
-                {
-                    Ok(_) => Ok("Account verified".to_string()),
-                    Err(_) => Err(VerificationTokenError::ServerError(
-                        VerificationTokenServerError::DatabaseError,
-                    )),
-                }
-            }
-            Err(e) => Err(e),
         }
     }
 
@@ -246,6 +259,7 @@ impl ConfirmationToken for Cft {
         _email_type: TokenEmailType,
         _token: Option<String>,
         _resend: bool,
+        _token_type: TokenType,
     ) -> Result<String, VerificationTokenError> {
         dotenv().ok();
         let google_smtp_password = env::var("AUTH_EMAIL_PASSWORD")
@@ -258,7 +272,7 @@ impl ConfirmationToken for Cft {
 
         let token = match _token {
             Some(tok) => tok,
-            None => match Self::new(_u_email.clone(), _resend, _pool) {
+            None => match Self::new(_u_email.clone(), _resend, _token_type, _pool) {
                 Ok(tok) => tok,
                 Err(e) => {
                     eprintln!("generating token in sending erro {:?}", e);
@@ -276,6 +290,12 @@ impl ConfirmationToken for Cft {
             TokenEmailType::AccountVerificationResend => email_body_generator(
                 EmailType::AccountVerificationResend(_username.clone(), token),
             ),
+            TokenEmailType::PasswordReset => {
+                email_body_generator(EmailType::ChangePassword(_username.clone(), token))
+            }
+            TokenEmailType::PasswordResetResend => {
+                todo!()
+            }
         };
 
         let email = lettre::Message::builder()
@@ -285,7 +305,14 @@ impl ConfirmationToken for Cft {
                     .unwrap(),
             )
             .to(format!("{} <{}>", _username, _u_email).parse().unwrap())
-            .subject("Electrovision Account Verification")
+            .subject(match _email_type {
+                TokenEmailType::AccountVerification | TokenEmailType::AccountVerificationResend => {
+                    "Electro-Vision account verification"
+                }
+                TokenEmailType::PasswordReset | TokenEmailType::PasswordResetResend => {
+                    "Electro-Vision password reset"
+                }
+            })
             .multipart(
                 MultiPart::alternative().singlepart(SinglePart::html(email_body.to_string())),
             )
@@ -293,7 +320,7 @@ impl ConfirmationToken for Cft {
 
         let creds = Credentials::new(google_smtp_name, google_smtp_password);
 
-        let mailer = lettre::SmtpTransport::relay("smtp.gmail.com")
+        let mailer = lettre::SmtpTransport::relay(SMTP)
             .unwrap()
             .credentials(creds)
             .build();

@@ -7,7 +7,7 @@ use serde_derive::Deserialize;
 
 use auth::confirmation_token::token::ConfirmationToken;
 
-use crate::auth::confirmation_token::token::Cft;
+use crate::auth::confirmation_token::token::{Cft, TokenEmailType, TokenType};
 use crate::auth::jwt::generate;
 use crate::auth::{response_user, ResponseUser, UserWithRoles};
 use crate::models::User;
@@ -123,7 +123,12 @@ pub async fn register(
             let username_clone = usr.username.clone();
             match (
                 insert_user_roles(usrclone.id, pool.clone()).await,
-                <Cft as ConfirmationToken>::new(request.email.clone(), false, pool.clone()),
+                <Cft as ConfirmationToken>::new(
+                    request.email.clone(),
+                    false,
+                    TokenType::AccountVerification,
+                    pool.clone(),
+                ),
             ) {
                 (Ok(_), Ok(tok)) => {
                     use crate::auth::auth_error::VerificationTokenError;
@@ -134,6 +139,7 @@ pub async fn register(
                         auth::confirmation_token::token::TokenEmailType::AccountVerification,
                         Some(tok),
                         false,
+                        TokenType::AccountVerification,
                     )
                     .await
                     {
