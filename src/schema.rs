@@ -1,7 +1,7 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
-    password_reset_tokens(id) {
+    confirmation_tokens (id) {
         id -> Int4,
         user_email -> Varchar,
         token -> Varchar,
@@ -12,7 +12,7 @@ diesel::table! {
 }
 
 diesel::table! {
-    confirmation_tokens (id) {
+    password_reset_tokens (id) {
         id -> Int4,
         user_email -> Varchar,
         token -> Varchar,
@@ -52,8 +52,8 @@ diesel::joinable!(user_roles -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     confirmation_tokens,
+    password_reset_tokens,
     roles,
     user_roles,
     users,
-    password_reset_tokens
 );
