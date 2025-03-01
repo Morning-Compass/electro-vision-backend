@@ -7,6 +7,7 @@ use serde_derive::Deserialize;
 
 use auth::confirmation_token::token::ConfirmationToken;
 
+use crate::auth::auth_error::AccountVerification;
 use crate::auth::confirmation_token::token::{Cft, TokenEmailType, TokenType};
 use crate::auth::jwt::generate;
 use crate::auth::{response_user, ResponseUser, UserWithRoles};
@@ -169,10 +170,10 @@ pub async fn register(
                         Err(e) => match e {
                             VerificationTokenError::NotFound => HttpResponse::BadRequest()
                                 .json("Token invalid or not generated yet".to_string()),
-                            VerificationTokenError::AccountAlreadyVerified => {
-                                HttpResponse::BadRequest()
-                                    .json("Account has already been verified".to_string())
-                            }
+                            VerificationTokenError::Account(
+                                AccountVerification::AccountAlreadyVerified,
+                            ) => HttpResponse::BadRequest()
+                                .json("Account has already been verified".to_string()),
                             VerificationTokenError::Expired => {
                                 HttpResponse::BadRequest().json("Token has expired".to_string())
                             }

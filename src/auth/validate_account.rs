@@ -3,7 +3,9 @@ use actix_web::web::Path;
 use actix_web::HttpResponse;
 use serde::Deserialize;
 
-use crate::auth::auth_error::{VerificationTokenError, VerificationTokenServerError};
+use crate::auth::auth_error::{
+    AccountVerification, VerificationTokenError, VerificationTokenServerError,
+};
 use crate::auth::confirmation_token::token::{Cft, ConfirmationToken, TokenType};
 use crate::constants::APPLICATION_JSON;
 use crate::{response, DPool};
@@ -31,7 +33,7 @@ pub async fn validate_account(user_token: Path<Token>, pool: DPool) -> HttpRespo
         Err(e) => match e {
             VerificationTokenError::NotFound => HttpResponse::BadRequest().json("Token not found"),
             VerificationTokenError::Expired => HttpResponse::BadRequest().json("Token expired"),
-            VerificationTokenError::AccountAlreadyVerified => {
+            VerificationTokenError::Account(AccountVerification::AccountAlreadyVerified) => {
                 HttpResponse::BadRequest().json("Account already veryfied")
             }
             VerificationTokenError::TokenAlreadyExists => {

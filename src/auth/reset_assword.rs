@@ -4,6 +4,7 @@ use diesel::query_dsl::methods::FilterDsl;
 use diesel::{ExpressionMethods, RunQueryDsl};
 use serde::Deserialize;
 
+use crate::auth::auth_error::AccountVerification;
 use crate::est_conn;
 use crate::schema::users as user_data;
 use crate::schema::users::dsl as user_table;
@@ -73,7 +74,7 @@ pub async fn email_reset_password(
         Err(e) => match e {
             VerificationTokenError::NotFound => HttpResponse::BadRequest().json("Token not found"),
             VerificationTokenError::Expired => HttpResponse::BadRequest().json("Token expired"),
-            VerificationTokenError::AccountAlreadyVerified => {
+            VerificationTokenError::Account(AccountVerification::AccountAlreadyVerified) => {
                 HttpResponse::BadRequest().json("Account already veryfied")
             }
             VerificationTokenError::TokenAlreadyExists => {
@@ -95,6 +96,18 @@ pub async fn reset_password(pool: DPool, request: Json<ResetPasswordRequest>) ->
         pool,
     ) {
         Ok(_) => HttpResponse::Ok().json("Email send with verification link"),
-        Err(e) => {}
+        Err(e) => match e {
+            VerificationTokenError::NotFound => HttpResponse::BadRequest().json("Token not found"),
+            VerificationTokenError::Expired => HttpResponse::BadRequest().json("Token expired"),
+            VerificationTokenError::Account(AccountVerification::AccountAlreadyVerified) => {
+                HttpResponse::BadRequest().json("Account already veryfied")
+            }
+            VerificationTokenError::TokenAlreadyExists => {
+                HttpResponse::BadRequest().json("Token already exists")
+            }
+            VerificationTokenError::ServerError(_) => {
+                HttpResponse::InternalServerError().json("An unexpected error occured".to_string())
+            }
+        },
     }
 }

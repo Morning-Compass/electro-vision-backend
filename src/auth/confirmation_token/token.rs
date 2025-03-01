@@ -17,7 +17,9 @@ use crate::schema::password_reset_tokens::dsl as psr_table;
 use schema::confirmation_tokens as ct_data;
 use schema::password_reset_tokens as psr_data;
 
-use crate::auth::auth_error::{VerificationTokenError, VerificationTokenServerError};
+use crate::auth::auth_error::{
+    AccountVerification, VerificationTokenError, VerificationTokenServerError,
+};
 use crate::emails::{email_body_generator, EmailType};
 use crate::schema::users::account_valid;
 use crate::schema::{confirmation_tokens, password_reset_tokens};
@@ -196,7 +198,9 @@ impl ConfirmationToken for Cft {
         match db_token {
             Ok(Some(UnifiedToken::Confirmation(tok))) => {
                 if tok.confirmed_at.is_some() {
-                    return Err(VerificationTokenError::AccountAlreadyVerified);
+                    return Err(VerificationTokenError::Account(
+                        AccountVerification::AccountAlreadyVerified,
+                    ));
                 }
                 let current_time = Utc::now().naive_utc();
                 if current_time - Duration::seconds(CONFIRMATION_TOKEN_EXIPIRATION_TIME)
