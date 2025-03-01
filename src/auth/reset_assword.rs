@@ -59,7 +59,7 @@ pub async fn email_reset_password(
     let pool_clone: DPool = pool.clone();
     match <Cft as ConfirmationToken>::confirm(
         token.token.clone(),
-        TokenType::PasswordReset,
+        TokenType::PasswordReset(req.email.clone()),
         pool_clone,
     ) {
         Ok(_) => match change_password(req.email.clone(), req.new_password.clone(), pool).await {
@@ -92,7 +92,7 @@ pub async fn reset_password(pool: DPool, request: Json<ResetPasswordRequest>) ->
     match <Cft as ConfirmationToken>::new(
         request.email.clone(),
         false,
-        TokenType::PasswordReset,
+        TokenType::PasswordReset(request.email.clone()),
         pool,
     ) {
         Ok(_) => HttpResponse::Ok().json("Email send with verification link"),

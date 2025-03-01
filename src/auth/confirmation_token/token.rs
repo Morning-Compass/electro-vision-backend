@@ -14,6 +14,8 @@ use lettre::Transport;
 use crate::constants::SMTP;
 use crate::schema::confirmation_tokens::dsl as ct_table;
 use crate::schema::password_reset_tokens::dsl as psr_table;
+use crate::schema::users as user_data;
+use crate::schema::users::dsl as user_table;
 use schema::confirmation_tokens as ct_data;
 use schema::password_reset_tokens as psr_data;
 
@@ -24,7 +26,7 @@ use crate::emails::{email_body_generator, EmailType};
 use crate::schema::users::account_valid;
 use crate::schema::{confirmation_tokens, password_reset_tokens};
 use crate::{constants::CONFIRMATION_TOKEN_EXIPIRATION_TIME, est_conn, DPool};
-use crate::{models, schema};
+use crate::{models, schema, user};
 
 pub enum TokenEmailType {
     AccountVerification,
@@ -35,7 +37,7 @@ pub enum TokenEmailType {
 
 pub enum TokenType {
     AccountVerification,
-    PasswordReset,
+    PasswordReset(String), //str email
 }
 
 pub struct Cft {
@@ -91,7 +93,7 @@ impl ConfirmationToken for Cft {
                     })?;
                 }
             }
-            TokenType::PasswordReset => {
+            TokenType::PasswordReset(_) => {
                 if !resend {
                     token_exists = diesel::select(exists(
                         psr_table::password_reset_tokens.filter(psr_data::user_email.eq(&u_email)),
@@ -143,7 +145,7 @@ impl ConfirmationToken for Cft {
                     )),
                 }
             }
-            TokenType::PasswordReset => {
+            TokenType::PasswordReset(_) => {
                 match diesel::insert_into(psr_table::password_reset_tokens)
                     .values((
                         psr_data::user_email.eq(ctoken.user_email),
@@ -172,7 +174,7 @@ impl ConfirmationToken for Cft {
 
         enum UnifiedToken {
             Confirmation(models::ConfirmationToken),
-            PasswordReset(models::PasswordResetTokens),
+            PasswordReset(models::PasswordResetTokens, String),
         }
 
         type Token = Result<Option<UnifiedToken>, diesel::result::Error>;
@@ -182,18 +184,13 @@ impl ConfirmationToken for Cft {
                 .filter(ct_data::token.eq(&_token))
                 .first::<models::ConfirmationToken>(&mut conn)
                 .optional()
-                .map(|opt| opt.map(UnifiedToken::Confirmation)),
-            TokenType::PasswordReset => psr_table::password_reset_tokens
+                .map(|opt| opt.map(|ct| UnifiedToken::Confirmation(ct))),
+            TokenType::PasswordReset(mail) => psr_table::password_reset_tokens
                 .filter(psr_data::token.eq(&_token))
                 .first::<models::PasswordResetTokens>(&mut conn)
                 .optional()
-                .map(|opt| opt.map(UnifiedToken::PasswordReset)),
+                .map(|opt| opt.map(|ct| UnifiedToken::PasswordReset(ct, mail))),
         };
-
-        match token_type {
-            TokenType::AccountVerification => {}
-            TokenType::PasswordReset => {}
-        }
 
         match db_token {
             Ok(Some(UnifiedToken::Confirmation(tok))) => {
@@ -214,7 +211,22 @@ impl ConfirmationToken for Cft {
                     .set(ct_data::confirmed_at.eq(Utc::now().naive_utc()))
                     .execute(&mut conn)
                     {
-                        Ok(_) => Ok("Account verified".to_string()),
+                        Ok(_) => {
+                            match diesel::update(
+                                user_table::users.filter(user_data::account_valid.eq(false)),
+                            )
+                            .set(user_data::account_valid.eq(true))
+                            .execute(&mut conn)
+                            {
+                                Ok(_) => Ok("Verificated account".to_string()),
+                                Err(e) => {
+                                    eprintln!("Error updating token verified status: {:?}", e);
+                                    Err(VerificationTokenError::ServerError(
+                                        VerificationTokenServerError::DatabaseError,
+                                    ))
+                                }
+                            }
+                        }
                         Err(e) => {
                             eprintln!("Error updating token verified status: {:?}", e);
                             Err(VerificationTokenError::ServerError(
@@ -224,7 +236,10 @@ impl ConfirmationToken for Cft {
                     }
                 }
             }
-            Ok(Some(UnifiedToken::PasswordReset(tok))) => {
+            Ok(Some(UnifiedToken::PasswordReset(tok, mail))) => {
+                if tok.user_email != mail {
+                    return Err(VerificationTokenError::NotFound);
+                }
                 let current_time = Utc::now().naive_utc();
                 if current_time - Duration::seconds(CONFIRMATION_TOKEN_EXIPIRATION_TIME)
                     > tok.created_at
@@ -240,11 +255,13 @@ impl ConfirmationToken for Cft {
                             VerificationTokenServerError::DatabaseError,
                         )
                     }) {
-                    Ok(_) => Ok("Token validated and consumed"),
-                    Err(_) => Err(VerificationTokenServerError::DatabaseError),
+                    Ok(_) => return Ok("Token validated and consumed".to_string()),
+                    Err(_) => {
+                        return Err(VerificationTokenError::ServerError(
+                            VerificationTokenServerError::DatabaseError,
+                        ))
+                    }
                 };
-
-                Ok("Password reset token valid".to_string())
             }
             Ok(None) => Err(VerificationTokenError::NotFound),
             Err(e) => {
