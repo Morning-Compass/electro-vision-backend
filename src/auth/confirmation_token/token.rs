@@ -90,19 +90,7 @@ impl ConfirmationToken for Cft {
                     })?;
                 }
             }
-            TokenType::PasswordReset(_) => {
-                if !resend {
-                    token_exists = diesel::select(exists(
-                        psr_table::password_reset_tokens.filter(psr_data::user_email.eq(&u_email)),
-                    ))
-                    .get_result::<bool>(&mut est_conn(pool.clone()))
-                    .map_err(|_| {
-                        VerificationTokenError::ServerError(
-                            VerificationTokenServerError::DatabaseError,
-                        )
-                    })?;
-                }
-            }
+            TokenType::PasswordReset(_) => {}
         }
 
         if token_exists {
@@ -166,7 +154,6 @@ impl ConfirmationToken for Cft {
         token_type: TokenType,
         pool: DPool,
     ) -> Result<String, VerificationTokenError> {
-        
         let mut conn = est_conn(pool);
 
         enum UnifiedToken {

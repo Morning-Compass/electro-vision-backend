@@ -13,6 +13,7 @@ use crate::auth::jwt::generate;
 use crate::auth::{ResponseUser, UserWithRoles};
 use crate::models::User;
 use crate::response::JsonResponse;
+use crate::response::Response as Res;
 use crate::user::NoIdUser;
 use crate::{auth, est_conn, schema, DPool, ResponseKeys};
 
@@ -151,7 +152,7 @@ pub async fn register(
                                 Err(_) => {
                                     eprintln!("Error generating jwt");
                                     return HttpResponse::InternalServerError()
-                                        .json("Error generating jwt");
+                                        .json(Res::new("Error generating jwt"));
                                 }
                             };
 
@@ -161,29 +162,27 @@ pub async fn register(
                                 .select(schema::roles::name)
                                 .load::<String>(&mut est_conn(pool))
                                 .unwrap_or_else(|_| vec![]);
-                            HttpResponse::Ok().json(ResponseUser::new(UserWithRoles::new(
-                                usr,
-                                user_roles_result,
-                                token,
+                            HttpResponse::Ok().json(Res::new(ResponseUser::new(
+                                UserWithRoles::new(usr, user_roles_result, token),
                             )))
                         }
                         Err(e) => match e {
                             VerificationTokenError::NotFound => HttpResponse::BadRequest()
-                                .json("Token invalid or not generated yet".to_string()),
+                                .json(Res::new("Token invalid or not generated yet")),
                             VerificationTokenError::Account(
                                 AccountVerification::AccountAlreadyVerified,
                             ) => HttpResponse::BadRequest()
-                                .json("Account has already been verified".to_string()),
-                            VerificationTokenError::Expired => {
-                                HttpResponse::BadRequest().json("Token has expired".to_string())
-                            }
+                                .json(Res::new("Account has already been verified".to_string())),
+                            VerificationTokenError::Expired => HttpResponse::BadRequest()
+                                .json(Res::new("Token has expired".to_string())),
                             VerificationTokenError::ServerError(_) => {
                                 eprintln!("{:?}", e);
                                 HttpResponse::InternalServerError()
-                                    .json("Server error while veryfing account")
+                                    .json(Res::new("Server error while veryfing account"))
                             }
                             VerificationTokenError::TokenAlreadyExists => {
-                                HttpResponse::BadRequest().json("Verification token already exists")
+                                HttpResponse::BadRequest()
+                                    .json(Res::new("Verification token already exists"))
                             }
                         },
                     }
@@ -193,17 +192,13 @@ pub async fn register(
                         "Error inserting user roles while registration brumv: {:?}",
                         e
                     );
-                    HttpResponse::InternalServerError().json(JsonResponse::new(
-                        keys.err_internal_key,
-                        keys.err_internal_value,
-                    ))
+                    HttpResponse::InternalServerError()
+                        .json(Res::new("Something went wrong during registration"))
                 }
                 (_, Err(e)) => {
                     eprintln!("Error while creating token: {:?}", e);
-                    HttpResponse::InternalServerError().json(JsonResponse::new(
-                        keys.err_internal_key,
-                        keys.err_internal_value,
-                    ))
+                    HttpResponse::InternalServerError()
+                        .json(Res::new("Something went wrong during token creation"))
                 }
             }
         }
@@ -212,17 +207,11 @@ pub async fn register(
                 if let Some(existing_email) = info.details() {
                     eprintln!("Email already exists: {}", existing_email);
                 }
-                HttpResponse::BadRequest().json(JsonResponse::new(
-                    keys.err_email_exists_key,
-                    keys.err_email_exists_value,
-                ))
+                HttpResponse::BadRequest().json(Res::new("Email already exists"))
             }
             _ => {
                 eprintln!("Error registering user: {:?}", e);
-                HttpResponse::InternalServerError().json(JsonResponse::new(
-                    keys.err_internal_key,
-                    keys.err_internal_value,
-                ))
+                HttpResponse::InternalServerError().json(Res::new("Unknown Error"))
             }
         },
     }
