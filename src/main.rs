@@ -124,6 +124,7 @@ async fn main() -> std::io::Result<()> {
             .service(auth::resend_verification_email::resend_verification_email)
             .service(auth::reset_assword::reset_password)
             .service(auth::reset_assword::email_reset_password)
+            .service(auth::verify_session::verify_session)
     })
     .bind("127.0.0.1:3501")?
     .run()

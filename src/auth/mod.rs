@@ -1,4 +1,5 @@
 mod auth_error;
+pub mod verify_session;
 pub use auth_error::VerificationTokenError;
 mod response_user;
 mod user_with_roles;

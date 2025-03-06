@@ -86,11 +86,11 @@ pub async fn list(pool: DPool) -> HttpResponse {
     }
 }
 
-#[put("/change-password")]
-pub async fn change_password(request: Json<UserChangePassword>, pool: DPool) -> HttpResponse {
-    let user = FindData::find_by_email(request.email.clone(), pool).await;
-    let user_data = user.unwrap();
-    println!("User data: {:?}", user_data);
+// #[put("/change-password")]
+// pub async fn change_password(request: Json<UserChangePassword>, pool: DPool) -> HttpResponse {
+//     let user = FindData::find_by_email(request.email.clone(), pool).await;
+//     let user_data = user.unwrap();
+//     println!("User data: {:?}", user_data);
 
-    return HttpResponse::Accepted().finish();
-}
+//     return HttpResponse::Accepted().finish();
+// }
