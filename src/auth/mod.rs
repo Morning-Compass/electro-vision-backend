@@ -11,5 +11,5 @@ pub mod jwt;
 pub mod login;
 pub mod register;
 pub mod resend_verification_email;
-pub mod reset_assword;
+pub mod reset_password;
 pub mod validate_account;

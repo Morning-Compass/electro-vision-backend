@@ -12,9 +12,8 @@ use actix_web::error::ErrorInternalServerError;
 use actix_web::web::Data;
 use actix_web::{middleware, App, HttpServer};
 use chrono::Utc;
-use constants::ROLES;
+use constants::{DOMAIN, ROLES};
 use core::panic;
-use diesel::prelude::Insertable;
 use diesel::result::{DatabaseErrorKind, Error};
 use diesel::{
     r2d2::{self, ConnectionManager, Pool, PooledConnection},
@@ -122,11 +121,11 @@ async fn main() -> std::io::Result<()> {
             .service(login_username)
             .service(auth::validate_account::validate_account)
             .service(auth::resend_verification_email::resend_verification_email)
-            .service(auth::reset_assword::reset_password)
-            .service(auth::reset_assword::email_reset_password)
+            .service(auth::reset_password::reset_password)
+            .service(auth::reset_password::email_reset_password)
             .service(auth::verify_session::verify_session)
     })
-    .bind("127.0.0.1:3501")?
+    .bind(DOMAIN)?
     .run()
     .await
 }

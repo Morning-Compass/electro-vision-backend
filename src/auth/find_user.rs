@@ -4,9 +4,7 @@ use diesel::prelude::*;
 use diesel::QueryDsl;
 use diesel::{result::Error as DieselError, ExpressionMethods};
 
-pub struct FindData {
-    pub is_found: Result<bool, DieselError>,
-}
+pub struct FindData {}
 
 pub trait Find {
     async fn exists_by_email(email: String, pool: DPool) -> Result<bool, DieselError>;

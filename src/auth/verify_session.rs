@@ -1,7 +1,7 @@
 use crate::response::Response as Res;
 use crate::{auth::jwt, DPool};
 use actix_web::web::Json;
-use actix_web::{post, web::Path, HttpResponse};
+use actix_web::{post, HttpResponse};
 use serde::Deserialize;
 
 #[derive(Deserialize)]

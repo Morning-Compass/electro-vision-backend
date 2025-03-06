@@ -1,16 +1,13 @@
-use crate::auth::find_user::{Find, FindData};
 use crate::models::User;
 use crate::response::Response;
 use crate::{constants::APPLICATION_JSON, models};
 use actix_web::{
-    get, put,
-    web::Json,
+    get,
     web::{self},
     HttpResponse,
 };
 use chrono::{NaiveDateTime, Utc};
 use diesel::{prelude::*, result::Error};
-use serde::Deserialize;
 
 use crate::{est_conn, DPool};
 
@@ -22,17 +19,6 @@ pub struct NoIdUser {
     pub password: String,
     pub created_at: NaiveDateTime,
     pub account_valid: bool,
-}
-
-#[derive(Deserialize)]
-pub struct UserEmail {
-    pub email: String,
-}
-
-#[derive(Deserialize)]
-pub struct UserChangePassword {
-    pub email: String,
-    pub password: String,
 }
 
 impl models::User {

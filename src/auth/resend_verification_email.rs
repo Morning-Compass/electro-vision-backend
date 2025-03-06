@@ -22,7 +22,7 @@ pub async fn resend_verification_email(
 
     match user_data {
         Err(_) => {
-            HttpResponse::InternalServerError().json(Res::new("Error while getting user data"))
+            HttpResponse::InternalServerError().json(Res::new("Error while fetching user data"))
         }
         Ok(usr) => {
             match <Cft as ConfirmationToken>::send(

@@ -1,4 +1,4 @@
-pub const DOMAIN: &str = "127.0.0.1:3500/";
+pub const DOMAIN: &str = "127.0.0.1:3501/";
 pub const APPLICATION_JSON: &str = "application/json";
 pub const CONNECTION_POOL_ERROR: &str = "couldn't get DB connection from pool";
 pub const CONFIRMATION_TOKEN_EXIPIRATION_TIME: i64 = 900; // time in seconds

@@ -12,10 +12,9 @@ use crate::auth::confirmation_token::token::{Cft, TokenType};
 use crate::auth::jwt::generate;
 use crate::auth::{ResponseUser, UserWithRoles};
 use crate::models::User;
-use crate::response::JsonResponse;
 use crate::response::Response as Res;
 use crate::user::NoIdUser;
-use crate::{auth, est_conn, schema, DPool, ResponseKeys};
+use crate::{auth, est_conn, schema, DPool};
 
 #[derive(Deserialize, Clone)]
 struct RegisterRequest {
@@ -78,35 +77,13 @@ pub async fn insert_user_roles(usr_id: i32, pool: DPool) -> Result<String, Error
     }
 }
 
-pub struct RegisterJsonResponse {
-    ok_key: String,
-    ok_value: String,
-    err_internal_key: String,
-    err_internal_value: String,
-    err_email_exists_key: String,
-    err_email_exists_value: String,
-}
-
 pub struct OkResponse {
     message: String,
     user: ResponseUser,
 }
 
 #[post("/register")]
-pub async fn register(
-    request: Json<RegisterRequest>,
-    pool: DPool,
-    response_keys: ResponseKeys,
-) -> HttpResponse {
-    let keys = RegisterJsonResponse {
-        ok_key: response_keys["register_success"]["key"].to_string(),
-        ok_value: response_keys["register_success"]["message"].to_string(),
-        err_internal_key: response_keys["register_server_error"]["key"].to_string(),
-        err_internal_value: response_keys["register_server_error"]["message"].to_string(),
-        err_email_exists_key: response_keys["register_client_error"]["key"].to_string(),
-        err_email_exists_value: response_keys["register_client_error"]["message"].to_string(),
-    };
-
+pub async fn register(request: Json<RegisterRequest>, pool: DPool) -> HttpResponse {
     let new_user = User::new(
         request.username.clone(),
         request.email.clone(),

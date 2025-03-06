@@ -7,7 +7,7 @@ use serde::Deserialize;
 use crate::auth::auth_error::{AccountVerification, VerificationTokenError};
 use crate::auth::confirmation_token::token::{Cft, ConfirmationToken, TokenType};
 use crate::constants::APPLICATION_JSON;
-use crate::{response, DPool};
+use crate::DPool;
 
 #[derive(Deserialize)]
 pub struct Token {
