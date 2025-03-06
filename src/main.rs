@@ -23,7 +23,6 @@ use diesel::{
 use diesel::{ExpressionMethods, RunQueryDsl};
 use dotenv::dotenv;
 use models::{Role, User};
-use schema::{roles, user_roles};
 use std::env;
 use std::fs::File;
 use std::io::Read;

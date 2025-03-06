@@ -1,7 +1,5 @@
 mod auth_error;
-pub use auth_error::AuthError;
 pub use auth_error::VerificationTokenError;
-pub use auth_error::VerificationTokenServerError;
 mod response_user;
 mod user_with_roles;
 pub use response_user::ResponseUser;

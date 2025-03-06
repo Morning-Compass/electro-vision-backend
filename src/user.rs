@@ -9,7 +9,6 @@ use actix_web::{
     HttpResponse,
 };
 use chrono::{NaiveDateTime, Utc};
-use diesel::deserialize;
 use diesel::{prelude::*, result::Error};
 use serde::Deserialize;
 

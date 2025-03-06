@@ -4,7 +4,7 @@ use actix_web::HttpResponse;
 use serde::Deserialize;
 
 use crate::auth::auth_error::{
-    AccountVerification, VerificationTokenError, VerificationTokenServerError,
+    AccountVerification, VerificationTokenError,
 };
 use crate::auth::confirmation_token::token::{Cft, ConfirmationToken, TokenType};
 use crate::constants::APPLICATION_JSON;

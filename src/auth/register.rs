@@ -8,9 +8,9 @@ use serde_derive::Deserialize;
 use auth::confirmation_token::token::ConfirmationToken;
 
 use crate::auth::auth_error::AccountVerification;
-use crate::auth::confirmation_token::token::{Cft, TokenEmailType, TokenType};
+use crate::auth::confirmation_token::token::{Cft, TokenType};
 use crate::auth::jwt::generate;
-use crate::auth::{response_user, ResponseUser, UserWithRoles};
+use crate::auth::{ResponseUser, UserWithRoles};
 use crate::models::User;
 use crate::response::JsonResponse;
 use crate::user::NoIdUser;

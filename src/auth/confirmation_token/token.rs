@@ -1,4 +1,3 @@
-use std::any::Any;
 use std::env;
 
 use chrono::{Duration, NaiveDateTime, TimeDelta, Utc};
@@ -23,10 +22,8 @@ use crate::auth::auth_error::{
     AccountVerification, VerificationTokenError, VerificationTokenServerError,
 };
 use crate::emails::{email_body_generator, EmailType};
-use crate::schema::users::account_valid;
-use crate::schema::{confirmation_tokens, password_reset_tokens};
 use crate::{constants::CONFIRMATION_TOKEN_EXIPIRATION_TIME, est_conn, DPool};
-use crate::{models, schema, user};
+use crate::{models, schema};
 
 pub enum TokenEmailType {
     AccountVerification,
@@ -169,7 +166,7 @@ impl ConfirmationToken for Cft {
         token_type: TokenType,
         pool: DPool,
     ) -> Result<String, VerificationTokenError> {
-        use crate::schema::confirmation_tokens::dsl::*;
+        
         let mut conn = est_conn(pool);
 
         enum UnifiedToken {

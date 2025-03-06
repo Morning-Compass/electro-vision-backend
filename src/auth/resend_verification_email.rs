@@ -1,10 +1,8 @@
 use actix_web::{post, web::Json, HttpResponse};
-use diesel::deserialize;
 use serde::Deserialize;
 
 use crate::{
     auth::confirmation_token::token::TokenType,
-    models::{self, User},
     DPool,
 };
 

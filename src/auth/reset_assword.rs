@@ -1,5 +1,4 @@
 use actix_web::{post, put, web::Json, web::Path, HttpResponse};
-use bcrypt::bcrypt;
 use diesel::query_dsl::methods::FilterDsl;
 use diesel::{ExpressionMethods, RunQueryDsl};
 use serde::Deserialize;
