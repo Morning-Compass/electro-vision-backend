@@ -41,3 +41,15 @@ pub struct ConfirmationToken {
     pub expires_at: NaiveDateTime,
     pub confirmed_at: Option<NaiveDateTime>,
 }
+
+#[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]
+#[diesel(table_name = crate::schema::password_reset_tokens)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct PasswordResetTokens {
+    pub id: i32,
+    pub user_email: String,
+    pub token: String,
+    pub created_at: NaiveDateTime,
+    pub expires_at: NaiveDateTime,
+    pub confirmed_at: Option<NaiveDateTime>,
+}

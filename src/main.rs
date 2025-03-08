@@ -12,9 +12,8 @@ use actix_web::error::ErrorInternalServerError;
 use actix_web::web::Data;
 use actix_web::{middleware, App, HttpServer};
 use chrono::Utc;
-use constants::ROLES;
+use constants::{DOMAIN, ROLES};
 use core::panic;
-use diesel::prelude::Insertable;
 use diesel::result::{DatabaseErrorKind, Error};
 use diesel::{
     r2d2::{self, ConnectionManager, Pool, PooledConnection},
@@ -23,7 +22,6 @@ use diesel::{
 use diesel::{ExpressionMethods, RunQueryDsl};
 use dotenv::dotenv;
 use models::{Role, User};
-use schema::{roles, user_roles};
 use std::env;
 use std::fs::File;
 use std::io::Read;
@@ -103,7 +101,6 @@ async fn main() -> std::io::Result<()> {
         let conn_pool = pool.clone();
         let data_pool = Data::new(conn_pool);
         // for first start comment inserting test data
-        /*
         if let Err(err) = insert_test_data(data_pool).await {
             eprintln!("Failed to insert test data: {:?}", err);
             return Err(std::io::Error::new(
@@ -111,7 +108,6 @@ async fn main() -> std::io::Result<()> {
                 "Failed to insert test data",
             ));
         }
-        */
     }
 
     HttpServer::new(move || {
@@ -125,8 +121,11 @@ async fn main() -> std::io::Result<()> {
             .service(login_username)
             .service(auth::validate_account::validate_account)
             .service(auth::resend_verification_email::resend_verification_email)
+            .service(auth::reset_password::reset_password)
+            .service(auth::reset_password::email_reset_password)
+            .service(auth::verify_session::verify_session)
     })
-    .bind("127.0.0.1:3501")?
+    .bind(DOMAIN)?
     .run()
     .await
 }

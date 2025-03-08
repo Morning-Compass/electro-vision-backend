@@ -1,11 +1,20 @@
 #[derive(Debug)]
 pub enum VerificationTokenError {
-    Expired,
-    AccountAlreadyVerified,
+    Account(AccountVerification),
+    Password(PasswordReset),
     ServerError(VerificationTokenServerError),
-    NotFound,
     TokenAlreadyExists,
+    Expired,
+    NotFound,
 }
+
+#[derive(Debug)]
+pub enum AccountVerification {
+    AccountAlreadyVerified,
+}
+
+#[derive(Debug)]
+pub enum PasswordReset {}
 
 #[derive(Debug)]
 pub enum VerificationTokenServerError {

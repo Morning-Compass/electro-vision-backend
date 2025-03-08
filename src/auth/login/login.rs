@@ -6,10 +6,9 @@ use crate::models::User;
 use crate::{est_conn, response, schema, DPool};
 use actix_web::web;
 use actix_web::{post, web::Json, HttpResponse};
-use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use diesel::result::Error;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 type LoginUserError = response::Response<String>;
 type LoginResponse = response::Response<ResponseUser>;

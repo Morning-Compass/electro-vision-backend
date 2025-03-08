@@ -1,7 +1,6 @@
 mod auth_error;
-pub use auth_error::AuthError;
+pub mod verify_session;
 pub use auth_error::VerificationTokenError;
-pub use auth_error::VerificationTokenServerError;
 mod response_user;
 mod user_with_roles;
 pub use response_user::ResponseUser;
@@ -12,5 +11,5 @@ pub mod jwt;
 pub mod login;
 pub mod register;
 pub mod resend_verification_email;
-pub mod reset_assword;
+pub mod reset_password;
 pub mod validate_account;

@@ -25,5 +25,4 @@ impl JsonResponse {
     pub fn read(value: &str) -> serde_json::Value {
         serde_json::from_str(value).unwrap()
     }
-
 }
