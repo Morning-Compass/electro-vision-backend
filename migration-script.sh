@@ -27,6 +27,11 @@ echo "Migration folder found: $migration_folder"
 destination_up_file="$migration_folder/up.sql"
 destination_down_file="$migration_folder/down.sql"
 
+find "$migration_folder" -mindepth 1 -maxdepth 1 -type d -not -name '*diesel_initial*' -exec rm -rf {} +
+
+echo "Migration folder contents: \n"
+ls $migration_folder
+
 cp "$schema_up_file" "$destination_up_file"
 cp "$schema_down_file" "$destination_down_file"
 
