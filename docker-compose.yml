@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   db:
     image: postgres:16
@@ -9,8 +11,6 @@ services:
       POSTGRES_DB: morning-compass
     ports:
       - "5432:5432"
-    expose:
-      - "5432"
     volumes:
       - postgres:/var/lib/postgresql/data
     networks:
@@ -22,13 +22,9 @@ services:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - "./:/usr/src/morning-compass-rust"
-    links:
-      - db
+      - "./:/app"
     ports:
       - "3500:3500"
-    expose:
-      - "3500"
     environment:
       MY_LOG_LEVEL: info
       MY_LOG_STYLE: Always
@@ -36,7 +32,7 @@ services:
     depends_on:
       - db
     command: >
-      bash -c "diesel setup; diesel migration generate users; chmod +x migration-script.sh; sh ./migration-script.sh; diesel migration run; diesel migration redo; cargo run"
+      bash -c "./wait-for-it.sh db:5432 -- diesel setup && diesel migration generate users && chmod +x migration-script.sh && ./migration-script.sh && diesel migration run && diesel migration redo && cargo run"
     networks:
       - morning-compass-network
 

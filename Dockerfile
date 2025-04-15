@@ -1,15 +1,24 @@
-FROM rust:1.81-slim-bullseye
+FROM rust:1.82-slim-bullseye
 
+# Install dependencies
 RUN apt-get update -y && \
-    apt-get upgrade -y
-RUN apt-get install libpq-dev -y
-# apt-get install -y default-mysql-client
-# apt-get install -y mariadb-client
+    apt-get upgrade -y && \
+    apt-get install -y pkg-config libssl-dev libpq-dev curl
 
-ENV CARGO_TARGET_DIR=/tmp/target
+# Download and make wait-for-it.sh executable
+
+# Set working directory
 WORKDIR /app
+
+# Copy files
 COPY ./Cargo.toml Cargo.toml
 COPY . .
 
+# Install diesel_cli and cargo-watch
 RUN cargo install diesel_cli --no-default-features --features postgres
 RUN cargo install cargo-watch
+
+# Copy wait-for-it.sh to the working directory
+
+# Default command
+CMD ["./wait-for-it.sh", "db:5432", "--", "cargo", "run"]

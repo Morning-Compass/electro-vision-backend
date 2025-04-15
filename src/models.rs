@@ -2,7 +2,7 @@ use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]
+#[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable, Clone)]
 #[diesel(table_name = crate::schema::users)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct User {
@@ -18,7 +18,7 @@ pub struct User {
 #[diesel(table_name = crate::schema::roles)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Role {
-    pub id: i16,
+    pub id: i32,
     pub name: String,
 }
 
@@ -27,13 +27,25 @@ pub struct Role {
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct UserRole {
     pub user_id: i32,
-    pub role_id: i16,
+    pub role_id: i32,
 }
 
 #[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]
 #[diesel(table_name = crate::schema::confirmation_tokens)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct ConfirmationToken {
+    pub id: i32,
+    pub user_email: String,
+    pub token: String,
+    pub created_at: NaiveDateTime,
+    pub expires_at: NaiveDateTime,
+    pub confirmed_at: Option<NaiveDateTime>,
+}
+
+#[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]
+#[diesel(table_name = crate::schema::password_reset_tokens)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct PasswordResetTokens {
     pub id: i32,
     pub user_email: String,
     pub token: String,

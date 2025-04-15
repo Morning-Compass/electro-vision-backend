@@ -12,8 +12,19 @@ diesel::table! {
 }
 
 diesel::table! {
+    password_reset_tokens (id) {
+        id -> Int4,
+        user_email -> Varchar,
+        token -> Varchar,
+        created_at -> Timestamp,
+        expires_at -> Timestamp,
+        confirmed_at -> Nullable<Timestamp>,
+    }
+}
+
+diesel::table! {
     roles (id) {
-        id -> Int2,
+        id -> Int4,
         name -> Varchar,
     }
 }
@@ -21,7 +32,7 @@ diesel::table! {
 diesel::table! {
     user_roles (user_id, role_id) {
         user_id -> Int4,
-        role_id -> Int2,
+        role_id -> Int4,
     }
 }
 
@@ -41,6 +52,7 @@ diesel::joinable!(user_roles -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     confirmation_tokens,
+    password_reset_tokens,
     roles,
     user_roles,
     users,

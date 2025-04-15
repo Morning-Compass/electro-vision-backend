@@ -1,11 +1,30 @@
 #[derive(Debug)]
-pub enum VerificationTokenInvalid {
+pub enum VerificationTokenError {
+    Account(AccountVerification),
+    Password(PasswordReset),
+    ServerError(VerificationTokenServerError),
+    TokenAlreadyExists,
     Expired,
-    AccountAlreadyVerified,
-    ServerError,
     NotFound,
 }
 
+#[derive(Debug)]
+pub enum AccountVerification {
+    AccountAlreadyVerified,
+}
+
+#[derive(Debug)]
+pub enum PasswordReset {}
+
+#[derive(Debug)]
+pub enum VerificationTokenServerError {
+    SettingExpirationDateError,
+    TokenInsertionError,
+    DatabaseError,
+    TokenGenerationError,
+    EmailSendingError,
+    Other(String),
+}
 #[derive(Debug)]
 pub enum JWTInvalid {
     Expired,
@@ -18,7 +37,6 @@ pub enum AuthError {
     UsernameNotFound,
     EmailNotFound,
     PasswordIncorrect,
-    VerificationTokenError(VerificationTokenInvalid),
     JWTError(JWTInvalid),
     ServerError(String),
 }

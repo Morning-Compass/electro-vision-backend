@@ -1,65 +1,20 @@
+use crate::auth::jwt::generate;
+use crate::auth::ResponseUser;
+use crate::auth::UserWithRoles;
 use crate::constants::APPLICATION_JSON;
 use crate::models::User;
 use crate::{est_conn, response, schema, DPool};
 use actix_web::web;
 use actix_web::{post, web::Json, HttpResponse};
-use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use diesel::result::Error;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 type LoginUserError = response::Response<String>;
 type LoginResponse = response::Response<ResponseUser>;
 pub enum LoginMethodIdentifier {
     Username(String),
     Email(String),
-}
-#[derive(Debug, Serialize, Deserialize)]
-pub struct UserWithRoles {
-    id: i32,
-    username: String,
-    password: String,
-    email: String,
-    created_at: NaiveDateTime,
-    account_valid: bool,
-    roles: Vec<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct ResponseUser {
-    id: i32,
-    username: String,
-    email: String,
-    created_at: NaiveDateTime,
-    account_valid: bool,
-    roles: Vec<String>,
-}
-
-impl UserWithRoles {
-    pub fn new(user: User, roles: Vec<String>) -> Self {
-        Self {
-            id: user.id,
-            username: user.username,
-            email: user.email,
-            password: user.password,
-            created_at: user.created_at,
-            account_valid: user.account_valid,
-            roles,
-        }
-    }
-}
-
-impl ResponseUser {
-    fn new(user: UserWithRoles) -> Self {
-        Self {
-            id: user.id,
-            username: user.username,
-            email: user.email,
-            created_at: user.created_at,
-            account_valid: user.account_valid,
-            roles: user.roles,
-        }
-    }
 }
 
 #[derive(Deserialize)]
@@ -103,7 +58,14 @@ pub async fn list_user(
         .load::<String>(&mut est_conn(pool))
         .unwrap_or_else(|_| vec![]);
 
-    Ok(UserWithRoles::new(usr, user_roles_result))
+    let token = match generate(&usr.email) {
+        Ok(t) => t,
+        Err(_) => {
+            eprintln!("Error generating jwt");
+            return Err(Error::NotFound);
+        }
+    };
+    Ok(UserWithRoles::new(usr, user_roles_result, token))
 }
 
 #[post("/login-username")]
