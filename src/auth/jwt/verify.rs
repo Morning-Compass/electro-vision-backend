@@ -5,12 +5,14 @@ use diesel::{query_dsl::methods::FilterDsl, result::Error as DieselError, Expres
 use std::usize;
 
 fn verify_email(users_email: String, pool: DPool) -> Result<bool, DieselError> {
-    use crate::schema::users::dsl::*;
+    use crate::schema::auth_users::dsl::*;
 
     let conn = &mut est_conn(pool.clone());
 
-    let exists =
-        diesel::select(diesel::dsl::exists(users.filter(email.eq(users_email)))).get_result(conn);
+    let exists = diesel::select(diesel::dsl::exists(
+        auth_users.filter(email.eq(users_email)),
+    ))
+    .get_result(conn);
 
     match exists {
         Ok(true) => Ok(true),

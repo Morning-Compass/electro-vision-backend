@@ -319,7 +319,7 @@ create table conversations
         constraint conversations_pk
             primary key,
     name       varchar(70) not null,
-    created_at timestamp default now()
+    created_at timestamp default now() not null
 );
 
 alter table conversations

@@ -1,4 +1,4 @@
-use chrono::NaiveDateTime;
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -45,7 +45,7 @@ pub struct ConfirmationToken {
 #[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]
 #[diesel(table_name = crate::schema::password_reset_tokens)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct PasswordResetToken {
+pub struct PasswordResetTokens {
     pub id: i32,
     pub user_email: String,
     pub token: String,
@@ -74,7 +74,7 @@ pub struct Task {
     pub id: i32,
     pub workspace_id: i32,
     pub assigner_id: i32,
-    pub worker_id: Option<i32>,
+    pub worker_id: i32,
     pub description: Option<String>,
     pub description_multimedia: Option<Vec<u8>>,
     pub assignment_date: NaiveDateTime,
@@ -91,12 +91,28 @@ pub struct Status {
 }
 
 #[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]
+#[diesel(table_name = crate::schema::importance)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct Importance {
+    pub id: i32,
+    pub name: Option<String>,
+}
+
+#[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]
 #[diesel(table_name = crate::schema::workspace_roles)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct WorkspaceRole {
     pub id: i32,
     pub user_id: i32,
     pub name: String,
+}
+
+#[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]
+#[diesel(table_name = crate::schema::ev_subscriptions)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct EvSubscription {
+    pub id: i32,
+    pub subscription: String,
 }
 
 #[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]
@@ -127,8 +143,50 @@ pub struct Country {
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct PhoneDialCode {
     pub id: i32,
-    pub code: i32,
+    pub code: String,
     pub country: String,
+}
+
+#[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]
+#[diesel(table_name = crate::schema::problems)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct Problem {
+    pub id: i32,
+    pub worker_id: i32,
+    pub description: Option<String>,
+    pub mentor_id: i32,
+    pub problem_multimedia: Option<Vec<u8>>,
+}
+
+#[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]
+#[diesel(table_name = crate::schema::worker_workspace_data)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct WorkerWorkspaceData {
+    pub employer_id: i32,
+    pub user_id: i32,
+    pub working_since: NaiveDateTime,
+}
+
+#[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]
+#[diesel(table_name = crate::schema::positions)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct Position {
+    pub id: i32,
+    pub workspace_id: i32,
+    pub name: Option<String>,
+}
+
+#[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]
+#[diesel(table_name = crate::schema::workspace_users)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct WorkspaceUser {
+    pub user_id: i32,
+    pub workspace_id: i32,
+    pub plane_file_cut_name: String,
+    pub workspace_role_id: i32,
+    pub position_id: i32,
+    pub checkin_time: Option<NaiveTime>,
+    pub checkout_time: Option<NaiveTime>,
 }
 
 #[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]
@@ -160,57 +218,6 @@ pub struct ConversationParticipant {
     pub conversation_id: i32,
 }
 
-// New types for your additional tables
-#[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]
-#[diesel(table_name = crate::schema::importance)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct Importance {
-    pub id: i32,
-    pub name: Option<String>,
-}
-
-#[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]
-#[diesel(table_name = crate::schema::problems)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct Problem {
-    pub id: i32,
-    pub worker_id: i32,
-    pub description: Option<String>,
-    pub mentor_id: i32,
-    pub problem_multimedia: Option<Vec<u8>>,
-}
-
-#[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]
-#[diesel(table_name = crate::schema::worker_workspace_data)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct WorkerWorkspaceData {
-    pub employer_id: i32,
-    pub user_id: i32,
-    pub working_since: NaiveDateTime,
-}
-
-#[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]
-#[diesel(table_name = crate::schema::positions)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct Position {
-    pub id: i32,
-    pub workspace_id: Option<i32>,
-    pub name: Option<String>,
-}
-
-#[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]
-#[diesel(table_name = crate::schema::workspace_users)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct WorkspaceUser {
-    pub user_id: i32,
-    pub workspace_id: i32,
-    pub plane_file_cut_name: String,
-    pub workspace_role_id: i32,
-    pub position_id: i32,
-    pub checkin_time: Option<chrono::NaiveTime>,
-    pub checkout_time: Option<chrono::NaiveTime>,
-}
-
 #[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]
 #[diesel(table_name = crate::schema::users_citizenships)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
@@ -229,9 +236,15 @@ pub struct TaskCategory {
 }
 
 #[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]
-#[diesel(table_name = crate::schema::ev_subscriptions)]
+#[diesel(table_name = crate::schema::attendance)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct EvSubscription {
+pub struct Attendance {
     pub id: i32,
-    pub subscription: String,
+    pub user_id: i32,
+    pub date: NaiveDate,
+    pub checkin: NaiveTime,
+    pub checkin_photo: Option<Vec<u8>>,
+    pub checkout: Option<NaiveTime>,
+    pub checkout_photo: Option<Vec<u8>>,
+    pub workspace_id: i32,
 }

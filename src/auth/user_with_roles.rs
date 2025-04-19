@@ -1,7 +1,7 @@
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
-use crate::models::User;
+use crate::models::AuthUser as User;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UserWithRoles {

@@ -1,5 +1,3 @@
-// @generated automatically by Diesel CLI.
-
 diesel::table! {
     attendance (id) {
         id -> Int4,
@@ -47,7 +45,7 @@ diesel::table! {
         id -> Int4,
         #[max_length = 70]
         name -> Varchar,
-        created_at -> Nullable<Timestamp>,
+        created_at -> Timestamp,
     }
 }
 

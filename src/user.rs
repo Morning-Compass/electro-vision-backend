@@ -1,4 +1,4 @@
-use crate::models::User;
+use crate::models::AuthUser as User;
 use crate::response::Response;
 use crate::{constants::APPLICATION_JSON, models};
 use actix_web::{
@@ -21,7 +21,7 @@ pub struct NoIdUser {
     pub account_valid: bool,
 }
 
-impl models::User {
+impl User {
     pub fn new(username: String, email: String, password: String) -> NoIdUser {
         NoIdUser {
             username,
@@ -34,9 +34,9 @@ impl models::User {
 }
 
 pub async fn list_users(amount: i64, pool: DPool) -> Result<Users, Error> {
-    use crate::schema::users::dsl::*;
+    use crate::schema::auth_users::dsl::*;
 
-    let users_query = users
+    let users_query = auth_users
         .select(User::as_select())
         .order(created_at.desc())
         .limit(amount)

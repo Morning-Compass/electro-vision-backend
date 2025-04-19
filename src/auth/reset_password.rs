@@ -2,10 +2,10 @@ use crate::auth::auth_error::AccountVerification;
 use crate::auth::confirmation_token::token::TokenEmailType;
 use crate::auth::find_user::Find;
 use crate::est_conn;
-use crate::models::User;
+use crate::models::AuthUser as User;
 use crate::response::Response as Res;
-use crate::schema::users as user_data;
-use crate::schema::users::dsl as user_table;
+use crate::schema::auth_users as user_data;
+use crate::schema::auth_users::dsl as user_table;
 use actix_web::{post, put, web::Json, web::Path, HttpResponse};
 use diesel::query_dsl::methods::FilterDsl;
 use diesel::{ExpressionMethods, RunQueryDsl};
@@ -44,7 +44,7 @@ async fn change_password(email: String, password: String, pool: DPool) -> Result
         Ok(hp) => hp,
         Err(_) => return Err(()),
     };
-    match diesel::update(user_table::users.filter(user_data::email.eq(email)))
+    match diesel::update(user_table::auth_users.filter(user_data::email.eq(email)))
         .set(user_data::password.eq(hashed_password))
         .execute(&mut est_conn(pool))
     {

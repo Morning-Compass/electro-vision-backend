@@ -11,10 +11,10 @@ use lettre::transport::smtp::authentication::Credentials;
 use lettre::Transport;
 
 use crate::constants::SMTP;
+use crate::schema::auth_users as user_data;
+use crate::schema::auth_users::dsl as user_table;
 use crate::schema::confirmation_tokens::dsl as ct_table;
 use crate::schema::password_reset_tokens::dsl as psr_table;
-use crate::schema::users as user_data;
-use crate::schema::users::dsl as user_table;
 use schema::confirmation_tokens as ct_data;
 use schema::password_reset_tokens as psr_data;
 
@@ -197,7 +197,7 @@ impl ConfirmationToken for Cft {
                     {
                         Ok(_) => {
                             match diesel::update(
-                                user_table::users.filter(user_data::account_valid.eq(false)),
+                                user_table::auth_users.filter(user_data::account_valid.eq(false)),
                             )
                             .set(user_data::account_valid.eq(true))
                             .execute(&mut conn)

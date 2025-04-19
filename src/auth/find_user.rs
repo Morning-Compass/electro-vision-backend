@@ -1,4 +1,4 @@
-use crate::models::User;
+use crate::models::AuthUser as User;
 use crate::{est_conn, schema, DPool};
 use diesel::prelude::*;
 use diesel::QueryDsl;
@@ -13,10 +13,10 @@ pub trait Find {
 
 impl Find for FindData {
     async fn exists_by_email(_email: String, pool: DPool) -> Result<bool, DieselError> {
-        use schema::users::dsl::*;
+        use schema::auth_users::dsl::*;
         let conn = &mut est_conn(pool.clone());
         let is_found = diesel::select(diesel::dsl::exists(
-            users.select(email).filter(email.eq(_email.clone())),
+            auth_users.select(email).filter(email.eq(_email.clone())),
         ))
         .get_result::<bool>(conn);
         match is_found {
@@ -32,9 +32,9 @@ impl Find for FindData {
         }
     }
     async fn find_by_email(_email: String, pool: DPool) -> Result<User, DieselError> {
-        use schema::users::dsl::*;
+        use schema::auth_users::dsl::*;
         let conn = &mut est_conn(pool.clone());
-        let user_data = users
+        let user_data = auth_users
             .filter(email.eq(_email))
             .select(User::as_select())
             .first(conn);
