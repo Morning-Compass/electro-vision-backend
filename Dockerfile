@@ -18,7 +18,6 @@ COPY . .
 RUN cargo install diesel_cli --no-default-features --features postgres
 RUN cargo install cargo-watch
 
-# Copy wait-for-it.sh to the working directory
 
 # Default command
 CMD ["./wait-for-it.sh", "db:5432", "--", "cargo", "run"]

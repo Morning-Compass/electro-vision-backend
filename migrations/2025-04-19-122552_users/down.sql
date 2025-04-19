@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS attendance;
+
 DROP TABLE IF EXISTS users_citizenships;
 
 DROP TABLE IF EXISTS conversation_participants;
@@ -43,23 +45,3 @@ DROP TABLE IF EXISTS password_reset_tokens;
 DROP TABLE IF EXISTS auth_users;
 
 DROP TABLE IF EXISTS roles;
-
-DROP TABLE IF EXISTS __diesel_schema_migrations;
-
--- Drop sequences
-DROP SEQUENCE IF EXISTS users_id_seq;
-
-DROP SEQUENCE IF EXISTS workspace_id_seq;
-
-DROP SEQUENCE IF EXISTS workspace_owner_id_seq;
-
-DROP SEQUENCE IF EXISTS tasks_worker_id_seq;
-
-DROP SEQUENCE IF EXISTS phone_dial_codes_country_seq;
-
--- Drop functions
-DROP FUNCTION IF EXISTS init_status_values ();
-
-DROP FUNCTION IF EXISTS diesel_set_updated_at ();
-
-DROP FUNCTION IF EXISTS diesel_manage_updated_at (_tbl regclass);
