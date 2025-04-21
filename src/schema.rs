@@ -1,3 +1,5 @@
+// @generated automatically by Diesel CLI.
+
 diesel::table! {
     attendance (id) {
         id -> Int4,
@@ -230,11 +232,13 @@ diesel::table! {
         #[max_length = 150]
         plan_file_name -> Varchar,
         start_date -> Timestamp,
-        finish_date -> Nullable<Timestamp>,
+        finish_date -> Nullable<Date>,
         #[max_length = 40]
         geolocation -> Nullable<Varchar>,
         owner_id -> Int4,
         ev_subscription_id -> Int4,
+        #[max_length = 60]
+        name -> Varchar,
     }
 }
 

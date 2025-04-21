@@ -1,4 +1,5 @@
 mod auth;
+mod buisness_logic;
 mod constants;
 mod emails;
 mod models;
@@ -41,6 +42,8 @@ async fn main() -> std::io::Result<()> {
     dotenv().ok();
     env_logger::init();
 
+    println!("{}", Utc::now().naive_utc());
+
     let mut file = File::open("api-response.json")?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
@@ -67,6 +70,7 @@ async fn main() -> std::io::Result<()> {
             .service(auth::reset_password::reset_password)
             .service(auth::reset_password::email_reset_password)
             .service(auth::verify_session::verify_session)
+            .service(buisness_logic::create_workspace::create_workspace)
     })
     .bind(DOMAIN)?
     .run()
