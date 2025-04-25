@@ -90,6 +90,7 @@ pub async fn email_reset_password(
             VerificationTokenError::ServerError(_) => {
                 HttpResponse::InternalServerError().json(Res::new("An unexpected error occurred"))
             }
+            _ => HttpResponse::BadRequest().json(Res::new("Bad Request")),
         },
     }
 }
@@ -97,11 +98,15 @@ pub async fn email_reset_password(
 #[post("/reset_password")]
 pub async fn reset_password(pool: DPool, request: Json<ResetPasswordRequest>) -> HttpResponse {
     let pool_clone = pool.clone();
-    let user: User =
-        match <FindData as Find>::find_by_email(request.email.clone(), pool_clone).await {
-            Ok(u) => u,
-            Err(_) => return HttpResponse::InternalServerError().json(Res::new("Unknown error")),
-        };
+    let user: User = match <FindData as Find>::find_auth_user_by_email(
+        request.email.clone(),
+        pool_clone,
+    )
+    .await
+    {
+        Ok(u) => u,
+        Err(_) => return HttpResponse::InternalServerError().json(Res::new("Unknown error")),
+    };
 
     match <Cft as ConfirmationToken>::send(
         user.username,

@@ -6,6 +6,15 @@ pub enum VerificationTokenError {
     TokenAlreadyExists,
     Expired,
     NotFound,
+    Invitation(InvitationError),
+}
+
+#[derive(Debug)]
+pub enum InvitationError {
+    AlreadyInWorkspace,
+    NotInvited,
+    Expired,
+    NotFound,
 }
 
 #[derive(Debug)]
@@ -24,6 +33,7 @@ pub enum VerificationTokenServerError {
     TokenGenerationError,
     EmailSendingError,
     Other(String),
+    WorkspaceInvitationError,
 }
 #[derive(Debug)]
 pub enum JWTInvalid {

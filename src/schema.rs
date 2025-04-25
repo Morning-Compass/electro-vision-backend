@@ -36,6 +36,18 @@ diesel::table! {
 }
 
 diesel::table! {
+    workspace_invitations (id) {
+        id -> Int4,
+        user_email -> Varchar,
+        token -> Varchar,
+        created_at -> Timestamp,
+        expires_at -> Timestamp,
+        confirmed_at -> Nullable<Timestamp>,
+        workspace_id -> Int4,
+    }
+}
+
+diesel::table! {
     conversation_participants (user_id, conversation_id) {
         conversation_id -> Int4,
         user_id -> Int4,
@@ -218,7 +230,7 @@ diesel::table! {
         user_id -> Int4,
         workspace_id -> Int4,
         #[max_length = 150]
-        plane_file_cut_name -> Varchar,
+        plane_file_cut_name -> Nullable<Varchar>,
         workspace_role_id -> Int4,
         position_id -> Int4,
         checkin_time -> Nullable<Time>,
@@ -290,4 +302,5 @@ diesel::allow_tables_to_appear_in_same_query!(
     workspace_roles,
     workspace_users,
     workspaces,
+    workspace_invitations
 );

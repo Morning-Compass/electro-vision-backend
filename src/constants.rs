@@ -4,6 +4,7 @@ pub const CONNECTION_POOL_ERROR: &str = "couldn't get DB connection from pool";
 pub const CONFIRMATION_TOKEN_EXIPIRATION_TIME: i64 = 900; // time in seconds
 pub const HASH_COST: u8 = 10;
 pub const JWT_EXPIRATION_TIME: i64 = 900;
+pub const WORKSPACE_INVITATION_EXPIRATION_TIME: i64 = 604800;
 pub const PASSWORD_RESET_TOKEN_EXPIRATION_TIME: i64 = 900;
 pub const TEST_USERNAME: &str = "tomek";
 pub const TEST_EMAIL: &str = "tomek@el-jot.eu";

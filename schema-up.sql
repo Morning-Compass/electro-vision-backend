@@ -298,7 +298,7 @@ create table workspace_users
         constraint workspace_users_workspaces_id_fk
             references workspaces
             on update cascade on delete cascade,
-    plane_file_cut_name varchar(150) not null,
+    plane_file_cut_name varchar(150),
     workspace_role_id   serial
         constraint workspace_users_workspace_roles_id_fk
             references workspace_roles
@@ -394,6 +394,23 @@ create table attendance
             references workspaces
             on update cascade on delete cascade
 );
+
+
+create table workspace_invitations
+(
+    id           serial
+        constraint workspace_invitations_pk
+            primary key,
+    user_email   varchar                 not null
+        constraint workspace_invitations_auth_users_email_fk
+            references auth_users (email)
+            on update cascade on delete cascade,
+    token        varchar                 not null,
+    created_at   timestamp default now() not null,
+    expires_at   timestamp               not null,
+    confirmed_at timestamp
+);
+
 
 alter table attendance
     owner to postgres;

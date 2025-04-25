@@ -161,6 +161,8 @@ pub async fn register(request: Json<RegisterRequest>, pool: DPool) -> HttpRespon
                                 HttpResponse::BadRequest()
                                     .json(Res::new("Verification token already exists"))
                             }
+                            VerificationTokenError::Invitation(_) => HttpResponse::BadRequest()
+                                .json(Res::new("You can not invite when you register")),
                         },
                     }
                 }

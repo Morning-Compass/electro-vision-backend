@@ -3,6 +3,7 @@ mod buisness_logic;
 mod constants;
 mod emails;
 mod models;
+mod models_insertable;
 mod response;
 mod response_handler;
 mod schema;
@@ -57,10 +58,22 @@ async fn main() -> std::io::Result<()> {
         .expect("Failed to create pool");
 
     HttpServer::new(move || {
+        let cors = actix_cors::Cors::default()
+            .allowed_origin("http://localhost:3000")
+            .allowed_methods(vec!["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+            .allowed_headers(vec![
+                actix_web::http::header::AUTHORIZATION,
+                actix_web::http::header::ACCEPT,
+                actix_web::http::header::CONTENT_TYPE,
+            ])
+            .supports_credentials()
+            .max_age(3600);
+
         App::new()
             .app_data(actix_web::web::Data::new(pool.clone()))
             .app_data(actix_web::web::Data::new(response_keys.clone()))
             .wrap(middleware::Logger::default())
+            .wrap(cors)
             .service(user::list)
             .service(auth::register::register)
             .service(login_email)

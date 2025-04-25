@@ -43,6 +43,19 @@ pub struct ConfirmationToken {
 }
 
 #[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]
+#[diesel(table_name = crate::schema::workspace_invitations)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct WorkspaceInvitation {
+    pub id: i32,
+    pub user_email: String,
+    pub token: String,
+    pub created_at: NaiveDateTime,
+    pub expires_at: NaiveDateTime,
+    pub confirmed_at: Option<NaiveDateTime>,
+    pub workspace_id: i32,
+}
+
+#[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]
 #[diesel(table_name = crate::schema::password_reset_tokens)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct PasswordResetTokens {
@@ -183,7 +196,7 @@ pub struct Position {
 pub struct WorkspaceUser {
     pub user_id: i32,
     pub workspace_id: i32,
-    pub plane_file_cut_name: String,
+    pub plane_file_cut_name: Option<String>,
     pub workspace_role_id: i32,
     pub position_id: i32,
     pub checkin_time: Option<NaiveTime>,

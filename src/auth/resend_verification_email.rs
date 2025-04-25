@@ -18,7 +18,7 @@ pub async fn resend_verification_email(
     request: Json<ResendVerificationEmailRequest>,
     pool: DPool,
 ) -> HttpResponse {
-    let user_data = FindData::find_by_email(request.email.clone(), pool.clone()).await;
+    let user_data = FindData::find_auth_user_by_email(request.email.clone(), pool.clone()).await;
 
     match user_data {
         Err(_) => {

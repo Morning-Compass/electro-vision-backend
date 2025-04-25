@@ -1,14 +1,14 @@
+use crate::auth::find_user::Find;
 use crate::auth::find_user::FindData;
+use crate::models_insertable::NewWorkspace;
 use crate::response::Response as Res;
 use crate::schema::workspaces::dsl as workspaces_table;
-use crate::{auth::find_user::Find, schema::workspaces as workspaces_data};
 use actix_web::{post, web::Json, HttpResponse};
-use chrono::{NaiveDate, NaiveDateTime, Utc};
-use diesel::prelude::Insertable;
-use diesel::{Connection, ExpressionMethods, RunQueryDsl};
+use chrono::{NaiveDate, Utc};
+use diesel::{Connection, RunQueryDsl};
 use serde::Deserialize;
 
-use crate::{est_conn, models, schema, DPool};
+use crate::{est_conn, DPool};
 
 #[derive(Deserialize)]
 struct CreateWorkspaceRequest {
@@ -19,29 +19,19 @@ struct CreateWorkspaceRequest {
     geolocation: Option<String>,
 }
 
-#[derive(Insertable)]
-#[diesel(table_name = crate::schema::workspaces)]
-struct NewWorkspace<'a> {
-    owner_id: i32,
-    geolocation: Option<&'a str>,
-    plan_file_name: Option<&'a str>,
-    start_date: NaiveDateTime,
-    finish_date: Option<NaiveDate>,
-    ev_subscription_id: i32,
-    name: String,
-}
-
 #[post("/create_workspace")]
 pub async fn create_workspace(pool: DPool, req: Json<CreateWorkspaceRequest>) -> HttpResponse {
-    let user = match <FindData as Find>::find_by_email(req.owner_email.clone(), pool.clone()).await
-    {
-        Ok(user) => user,
-        Err(_) => {
-            eprintln!("User not found for workspace creations");
-            return HttpResponse::InternalServerError()
-                .json(Res::new("Server error while creating workspace"));
-        }
-    };
+    let user =
+        match <FindData as Find>::find_auth_user_by_email(req.owner_email.clone(), pool.clone())
+            .await
+        {
+            Ok(user) => user,
+            Err(_) => {
+                eprintln!("User not found for workspace creations");
+                return HttpResponse::InternalServerError()
+                    .json(Res::new("Server error while creating workspace"));
+            }
+        };
 
     let conn = &mut est_conn(pool);
 

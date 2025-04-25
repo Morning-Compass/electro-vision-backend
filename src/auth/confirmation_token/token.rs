@@ -4,24 +4,29 @@ use chrono::{Duration, NaiveDateTime, TimeDelta, Utc};
 use diesel::dsl::exists;
 use diesel::prelude::OptionalExtension;
 use diesel::query_dsl::methods::FilterDsl;
-use diesel::{ExpressionMethods, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dotenvy::dotenv;
 use lettre::message::{MultiPart, SinglePart};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::Transport;
 
-use crate::constants::SMTP;
+use crate::constants::{JWT_EXPIRATION_TIME, SMTP, WORKSPACE_INVITATION_EXPIRATION_TIME};
+use crate::models_insertable::NewInvitation;
 use crate::schema::auth_users as user_data;
 use crate::schema::auth_users::dsl as user_table;
 use crate::schema::confirmation_tokens::dsl as ct_table;
 use crate::schema::password_reset_tokens::dsl as psr_table;
 use schema::confirmation_tokens as ct_data;
 use schema::password_reset_tokens as psr_data;
+use schema::workspace_users as workspace_users_data;
+use schema::workspace_users::dsl as workspace_users_table;
 
 use crate::auth::auth_error::{
-    AccountVerification, VerificationTokenError, VerificationTokenServerError,
+    AccountVerification, InvitationError, VerificationTokenError, VerificationTokenServerError,
 };
 use crate::emails::{email_body_generator, EmailType};
+use crate::schema::workspace_invitations as workspace_invitations_data;
+use crate::schema::workspace_invitations::dsl as workspace_invitations_table;
 use crate::{constants::CONFIRMATION_TOKEN_EXIPIRATION_TIME, est_conn, DPool};
 use crate::{models, schema};
 
@@ -30,11 +35,13 @@ pub enum TokenEmailType {
     AccountVerificationResend,
     PasswordReset,
     PasswordResetResend,
+    WorkspaceInvitation,
 }
 
 pub enum TokenType {
     AccountVerification,
-    PasswordReset(String), //str email
+    PasswordReset(String),    //str email
+    WorkspaceInvitation(i32), //i32 workspace_id
 }
 
 pub struct Cft {
@@ -91,6 +98,7 @@ impl ConfirmationToken for Cft {
                 }
             }
             TokenType::PasswordReset(_) => {}
+            TokenType::WorkspaceInvitation(_) => {}
         }
 
         if token_exists {
@@ -101,14 +109,7 @@ impl ConfirmationToken for Cft {
             user_email: u_email.clone(),
             token: uuid::Uuid::new_v4().to_string(),
             created_at: Utc::now().naive_utc(),
-            expires_at: Utc::now()
-                .naive_utc()
-                .checked_add_signed(TimeDelta::seconds(CONFIRMATION_TOKEN_EXIPIRATION_TIME))
-                .ok_or_else(|| {
-                    VerificationTokenError::ServerError(
-                        VerificationTokenServerError::SettingExpirationDateError,
-                    )
-                })?,
+            expires_at: Utc::now().naive_utc() + chrono::Duration::seconds(JWT_EXPIRATION_TIME),
         };
 
         let token_to_return = ctoken.token.clone();
@@ -146,6 +147,25 @@ impl ConfirmationToken for Cft {
                     )),
                 }
             }
+            TokenType::WorkspaceInvitation(workspace_id) => {
+                let invitation = NewInvitation {
+                    user_email: ctoken.user_email,
+                    token: ctoken.token,
+                    created_at: ctoken.created_at,
+                    expires_at: ctoken.expires_at,
+                    workspace_id,
+                };
+                let invitation_result =
+                    diesel::insert_into(workspace_invitations_table::workspace_invitations)
+                        .values(&invitation)
+                        .execute(&mut est_conn(pool));
+                match invitation_result {
+                    Ok(_) => Ok(token_to_return),
+                    Err(_) => Err(VerificationTokenError::ServerError(
+                        VerificationTokenServerError::WorkspaceInvitationError,
+                    )),
+                }
+            }
         }
     }
 
@@ -159,24 +179,31 @@ impl ConfirmationToken for Cft {
         enum UnifiedToken {
             Confirmation(models::ConfirmationToken),
             PasswordReset(models::PasswordResetTokens, String),
+            WorkspaceInvitation(models::WorkspaceInvitation),
         }
 
         type Token = Result<Option<UnifiedToken>, diesel::result::Error>;
 
         let db_token: Token = match token_type {
             TokenType::AccountVerification => ct_table::confirmation_tokens
-                .filter(ct_data::token.eq(&_token))
+                .filter(ct_data::token.eq(_token))
                 .first::<models::ConfirmationToken>(&mut conn)
                 .optional()
                 .map(|opt| opt.map(|ct| UnifiedToken::Confirmation(ct))),
             TokenType::PasswordReset(mail) => psr_table::password_reset_tokens
-                .filter(psr_data::token.eq(&_token))
+                .filter(psr_data::token.eq(_token))
                 .first::<models::PasswordResetTokens>(&mut conn)
                 .optional()
                 .map(|opt| opt.map(|ct| UnifiedToken::PasswordReset(ct, mail))),
+            TokenType::WorkspaceInvitation(_) => workspace_invitations_table::workspace_invitations
+                .filter(workspace_invitations_data::token.eq(_token))
+                .first::<models::WorkspaceInvitation>(&mut conn)
+                .optional()
+                .map(|opt| opt.map(|ct| UnifiedToken::WorkspaceInvitation(ct))),
         };
 
         match db_token {
+            Ok(Some(UnifiedToken::WorkspaceInvitation(tok))) => {}
             Ok(Some(UnifiedToken::Confirmation(tok))) => {
                 if tok.confirmed_at.is_some() {
                     return Err(VerificationTokenError::Account(
