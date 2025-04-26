@@ -9,5 +9,6 @@ WORKDIR /app
 
 # Copy compiled binary with verification
 COPY ./target/release/morning_compass_api .
+COPY ./api-response.json .
 
 CMD ["./morning_compass_api"]
