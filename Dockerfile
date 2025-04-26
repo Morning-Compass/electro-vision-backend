@@ -1,23 +1,13 @@
-FROM rust:1.82-slim-bullseye
+FROM debian:bookworm-slim
 
-# Install dependencies
+# Install runtime dependencies
 RUN apt-get update -y && \
-    apt-get upgrade -y && \
-    apt-get install -y pkg-config libssl-dev libpq-dev curl
+    apt-get install -y libpq-dev libssl3 ca-certificates file && \
+    rm -rf /var/lib/apt/lists/*
 
-# Download and make wait-for-it.sh executable
-
-# Set working directory
 WORKDIR /app
 
-# Copy files
-COPY ./Cargo.toml Cargo.toml
-COPY . .
+# Copy compiled binary with verification
+COPY ./target/release/morning_compass_api .
 
-# Install diesel_cli and cargo-watch
-RUN cargo install diesel_cli --no-default-features --features postgres
-RUN cargo install cargo-watch
-
-
-# Default command
-CMD ["./wait-for-it.sh", "db:5432", "--", "cargo", "run"]
+CMD ["./morning_compass_api"]
