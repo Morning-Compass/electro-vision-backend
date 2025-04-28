@@ -11,7 +11,7 @@ pub enum VerificationTokenError {
 
 #[derive(Debug)]
 pub enum InvitationError {
-    AlreadyInWorkspace,
+    UserAlreadyInWorkspace,
     NotInvited,
     Expired,
     NotFound,

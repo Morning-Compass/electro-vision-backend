@@ -232,7 +232,7 @@ diesel::table! {
         #[max_length = 150]
         plane_file_cut_name -> Nullable<Varchar>,
         workspace_role_id -> Int4,
-        position_id -> Int4,
+        position_id -> Nullable<Int4>,
         checkin_time -> Nullable<Time>,
         checkout_time -> Nullable<Time>,
     }

@@ -4,13 +4,15 @@ use chrono::{Duration, NaiveDateTime, TimeDelta, Utc};
 use diesel::dsl::exists;
 use diesel::prelude::OptionalExtension;
 use diesel::query_dsl::methods::FilterDsl;
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, RunQueryDsl};
 use dotenvy::dotenv;
 use lettre::message::{MultiPart, SinglePart};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::Transport;
 
+use crate::auth::find_user::{Find, FindData};
 use crate::constants::{JWT_EXPIRATION_TIME, SMTP, WORKSPACE_INVITATION_EXPIRATION_TIME};
+use crate::models::WorkspaceUser;
 use crate::models_insertable::NewInvitation;
 use crate::schema::auth_users as user_data;
 use crate::schema::auth_users::dsl as user_table;
@@ -52,13 +54,13 @@ pub struct Cft {
 }
 
 pub trait ConfirmationToken {
-    fn new(
+    async fn new(
         email: String,
         resend: bool,
         token_type: TokenType,
         pool: DPool,
     ) -> Result<String, VerificationTokenError>;
-    fn confirm(
+    async fn confirm(
         token: String,
         token_type: TokenType,
         pool: DPool,
@@ -75,7 +77,7 @@ pub trait ConfirmationToken {
 }
 
 impl ConfirmationToken for Cft {
-    fn new(
+    async fn new(
         u_email: String,
         resend: bool,
         token_type: TokenType,
@@ -169,12 +171,12 @@ impl ConfirmationToken for Cft {
         }
     }
 
-    fn confirm(
+    async fn confirm(
         _token: String,
         token_type: TokenType,
         pool: DPool,
     ) -> Result<String, VerificationTokenError> {
-        let mut conn = est_conn(pool);
+        let mut conn = est_conn(pool.clone());
 
         enum UnifiedToken {
             Confirmation(models::ConfirmationToken),
@@ -186,24 +188,86 @@ impl ConfirmationToken for Cft {
 
         let db_token: Token = match token_type {
             TokenType::AccountVerification => ct_table::confirmation_tokens
-                .filter(ct_data::token.eq(_token))
+                .filter(ct_data::token.eq(&_token))
                 .first::<models::ConfirmationToken>(&mut conn)
                 .optional()
                 .map(|opt| opt.map(|ct| UnifiedToken::Confirmation(ct))),
             TokenType::PasswordReset(mail) => psr_table::password_reset_tokens
-                .filter(psr_data::token.eq(_token))
+                .filter(psr_data::token.eq(&_token))
                 .first::<models::PasswordResetTokens>(&mut conn)
                 .optional()
                 .map(|opt| opt.map(|ct| UnifiedToken::PasswordReset(ct, mail))),
-            TokenType::WorkspaceInvitation(_) => workspace_invitations_table::workspace_invitations
-                .filter(workspace_invitations_data::token.eq(_token))
-                .first::<models::WorkspaceInvitation>(&mut conn)
-                .optional()
-                .map(|opt| opt.map(|ct| UnifiedToken::WorkspaceInvitation(ct))),
+            TokenType::WorkspaceInvitation(mail) => {
+                workspace_invitations_table::workspace_invitations
+                    .filter(workspace_invitations_data::token.eq(&_token))
+                    .first::<models::WorkspaceInvitation>(&mut conn)
+                    .optional()
+                    .map(|opt| opt.map(|ct| UnifiedToken::WorkspaceInvitation(ct)))
+            }
         };
 
         match db_token {
-            Ok(Some(UnifiedToken::WorkspaceInvitation(tok))) => {}
+            Ok(Some(UnifiedToken::WorkspaceInvitation(tok))) => {
+                // let invitations = workspace_invitations_table::workspace_invitations
+                //     .filter(workspace_invitations_data::workspace_id.eq(tok.workspace_id))
+                //     .load::<models::WorkspaceInvitation>(&mut conn)
+                //     .map_err(|e| {
+                //         eprintln!("Error loading workspace invitations: {:?}", e);
+                //         VerificationTokenError::ServerError(
+                //             VerificationTokenServerError::DatabaseError,
+                //         )
+                //     })?;
+
+                // for inv in invitations {
+                //     if inv.user_email == tok.user_email {
+                //         return Err(VerificationTokenError::Invitation(
+                //             InvitationError::AlreadyInWorkspace,
+                //         ));
+                //     }
+                // }
+
+                let user =
+                    match <FindData as Find>::find_auth_user_by_email(tok.user_email, pool.clone())
+                        .await
+                    {
+                        Ok(user) => user,
+                        Err(e) => {
+                            eprintln!("Error finding user: {:?}", e);
+                            return Err(VerificationTokenError::ServerError(
+                                VerificationTokenServerError::DatabaseError,
+                            ));
+                        }
+                    };
+
+                let workspace_users = match workspace_users_table::workspace_users
+                    .filter(workspace_users_data::user_id.eq(user.id))
+                    .load::<WorkspaceUser>(&mut est_conn(pool))
+                    .optional()
+                {
+                    Ok(workspace_users) => workspace_users,
+                    Err(e) => {
+                        eprintln!("Error loading workspace users: {:?}", e);
+                        return Err(VerificationTokenError::ServerError(
+                            VerificationTokenServerError::DatabaseError,
+                        ));
+                    }
+                };
+
+                if workspace_users.is_some() {
+                    return Err(VerificationTokenError::Invitation(
+                        InvitationError::UserAlreadyInWorkspace,
+                    ));
+                }
+
+                let current_time = Utc::now().naive_utc();
+                if current_time - Duration::seconds(WORKSPACE_INVITATION_EXPIRATION_TIME)
+                    > tok.created_at
+                {
+                    return Err(VerificationTokenError::Expired);
+                }
+
+                return Ok("Invitation accepted".to_string());
+            }
             Ok(Some(UnifiedToken::Confirmation(tok))) => {
                 if tok.confirmed_at.is_some() {
                     return Err(VerificationTokenError::Account(
@@ -304,7 +368,7 @@ impl ConfirmationToken for Cft {
 
         let token = match _token {
             Some(tok) => tok,
-            None => match Self::new(_u_email.clone(), _resend, _token_type, _pool) {
+            None => match Self::new(_u_email.clone(), _resend, _token_type, _pool).await {
                 Ok(tok) => tok,
                 Err(e) => {
                     eprintln!("generating token in sending erro {:?}", e);
@@ -328,11 +392,14 @@ impl ConfirmationToken for Cft {
             TokenEmailType::PasswordResetResend => {
                 todo!()
             }
+            TokenEmailType::WorkspaceInvitation => {
+                email_body_generator(EmailType::WorkspaceInvitation(_username.clone(), token))
+            }
         };
 
         let email = lettre::Message::builder()
             .from(
-                format!("Electro-Vision Auth <{}>", google_smtp_name)
+                format!("Electro-Vision <{}>", google_smtp_name)
                     .parse()
                     .unwrap(),
             )
@@ -344,6 +411,7 @@ impl ConfirmationToken for Cft {
                 TokenEmailType::PasswordReset | TokenEmailType::PasswordResetResend => {
                     "Electro-Vision password reset"
                 }
+                TokenEmailType::WorkspaceInvitation => "Electro-Vision workspace invitation",
             })
             .multipart(
                 MultiPart::alternative().singlepart(SinglePart::html(email_body.to_string())),

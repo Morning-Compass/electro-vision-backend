@@ -107,7 +107,8 @@ pub async fn register(request: Json<RegisterRequest>, pool: DPool) -> HttpRespon
                     false,
                     TokenType::AccountVerification,
                     pool.clone(),
-                ),
+                )
+                .await,
             ) {
                 (Ok(_), Ok(tok)) => {
                     use crate::auth::auth_error::VerificationTokenError;

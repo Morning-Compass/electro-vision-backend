@@ -10,6 +10,8 @@ pub const TEST_USERNAME: &str = "tomek";
 pub const TEST_EMAIL: &str = "tomek@el-jot.eu";
 pub const TEST_PASSWORD: &str = "qazxsw2.";
 pub const ROLES: [&str; 2] = ["USER", "ADMIN"];
+// oddac do create workspace ze wpisuje creator
+pub const WORKSPACE_ROLES: [&str; 4] = ["CREATOR", "ADMIN", "MANAGER", "WORKER"];
 pub const SMTP: &str = "smtp.gmail.com";
 pub const EMAIL_CSS_TEMPLATE: &str = r#"
     body, html {

@@ -18,9 +18,21 @@ pub trait Find {
         pool: DPool,
     ) -> Result<Workspace, DieselError>;
     async fn find_full_user_by_email(email: String, pool: DPool) -> Result<FullUser, DieselError>;
+    async fn find_auth_user_by_id(id: i32, pool: DPool) -> Result<User, DieselError>;
 }
 
 impl Find for FindData {
+    async fn find_auth_user_by_id(uid: i32, pool: DPool) -> Result<User, DieselError> {
+        let conn = &mut est_conn(pool.clone());
+        let user_data = users_table::auth_users
+            .filter(users_data::id.eq(uid))
+            .select(User::as_select())
+            .first(conn);
+        match user_data {
+            Ok(user) => Ok(user),
+            Err(e) => Err(e),
+        }
+    }
     async fn find_full_user_by_email(email: String, pool: DPool) -> Result<FullUser, DieselError> {
         todo!()
     }

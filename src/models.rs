@@ -198,7 +198,7 @@ pub struct WorkspaceUser {
     pub workspace_id: i32,
     pub plane_file_cut_name: Option<String>,
     pub workspace_role_id: i32,
-    pub position_id: i32,
+    pub position_id: Option<i32>,
     pub checkin_time: Option<NaiveTime>,
     pub checkout_time: Option<NaiveTime>,
 }

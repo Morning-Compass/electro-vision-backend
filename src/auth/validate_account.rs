@@ -21,7 +21,9 @@ pub async fn validate_account(user_token: Path<Token>, pool: DPool) -> HttpRespo
         user_token.token.clone(),
         TokenType::AccountVerification,
         pool,
-    ) {
+    )
+    .await
+    {
         Ok(_) => HttpResponse::Ok()
             .content_type(APPLICATION_JSON)
             .json(Res::new("Account verified successfully".to_string())),
@@ -39,6 +41,8 @@ pub async fn validate_account(user_token: Path<Token>, pool: DPool) -> HttpRespo
                 HttpResponse::BadRequest().json(Res::new("Token already exists"))
             }
             VerificationTokenError::ServerError(_) => HttpResponse::InternalServerError()
+                .json(Res::new("An unexpected error occurred".to_string())),
+            _ => HttpResponse::InternalServerError()
                 .json(Res::new("An unexpected error occurred".to_string())),
         },
     }

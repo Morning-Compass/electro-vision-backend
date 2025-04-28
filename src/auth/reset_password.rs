@@ -64,7 +64,9 @@ pub async fn email_reset_password(
         token.token.clone(),
         TokenType::PasswordReset(req.email.clone()),
         pool_clone,
-    ) {
+    )
+    .await
+    {
         Ok(_) => match change_password(req.email.clone(), req.new_password.clone(), pool).await {
             Ok(_) => HttpResponse::Ok()
                 .content_type(APPLICATION_JSON)
