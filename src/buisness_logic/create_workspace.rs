@@ -19,6 +19,7 @@ struct CreateWorkspaceRequest {
     geolocation: Option<String>,
 }
 
+// dodaj role crator worker etc w endpoincie
 #[post("/create_workspace")]
 pub async fn create_workspace(pool: DPool, req: Json<CreateWorkspaceRequest>) -> HttpResponse {
     let user =
