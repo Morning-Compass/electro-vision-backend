@@ -1,6 +1,6 @@
 use crate::models::AuthUser as User;
 use crate::response::Response;
-use crate::{constants::APPLICATION_JSON, models};
+use crate::constants::APPLICATION_JSON;
 use actix_web::{
     get,
     web::{self},

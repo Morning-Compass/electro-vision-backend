@@ -1,6 +1,6 @@
 use std::env;
 
-use chrono::{Duration, NaiveDateTime, TimeDelta, Utc};
+use chrono::{Duration, NaiveDateTime, Utc};
 use diesel::dsl::exists;
 use diesel::prelude::OptionalExtension;
 use diesel::query_dsl::methods::FilterDsl;

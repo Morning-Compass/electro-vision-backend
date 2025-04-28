@@ -11,20 +11,15 @@ mod user;
 
 use crate::auth::login::login::{login_email, login_username};
 use crate::constants::CONNECTION_POOL_ERROR;
-use actix_web::error::ErrorInternalServerError;
 use actix_web::web::Data;
 use actix_web::{middleware, App, HttpServer};
 use chrono::Utc;
-use constants::{DOMAIN, ROLES};
-use core::panic;
-use diesel::result::{DatabaseErrorKind, Error};
+use constants::DOMAIN;
 use diesel::{
     r2d2::{self, ConnectionManager, Pool, PooledConnection},
     PgConnection,
 };
-use diesel::{ExpressionMethods, RunQueryDsl};
 use dotenv::dotenv;
-use models::Role;
 use std::env;
 use std::fs::File;
 use std::io::Read;

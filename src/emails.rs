@@ -1,4 +1,4 @@
-use crate::constants::{DOMAIN, EMAIL_CSS_TEMPLATE};
+use crate::constants::EMAIL_CSS_TEMPLATE;
 
 pub enum EmailType {
     AccountVerification(String, String),

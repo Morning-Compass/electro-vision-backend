@@ -3,12 +3,10 @@ use crate::{
     response::Response as Res,
 };
 use actix_web::{post, web::Json, HttpResponse};
-use chrono::NaiveDateTime;
 use diesel::{prelude::Insertable, Connection, RunQueryDsl};
 use serde::Deserialize;
 
 use crate::{
-    auth::find_user::{Find, FindData},
     est_conn, DPool,
 };
 
