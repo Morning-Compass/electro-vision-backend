@@ -45,13 +45,16 @@ impl Find for FindData {
             Err(e) => return Err(e),
         };
         let conn = &mut est_conn(pool.clone());
-        let workspace: models::Workspace = match workspaces_table::workspaces
+        let workspace = match workspaces_table::workspaces
             .filter(workspaces_data::owner_id.eq(user.id))
             .select(models::Workspace::as_select())
             .first(conn)
         {
             Ok(workspace) => workspace,
-            Err(e) => return Err(e),
+            Err(e) => {
+                eprintln!("err find: {:?}", e);
+                return Err(e);
+            }
         };
 
         Ok(workspace)

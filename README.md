@@ -1,6 +1,6 @@
 # morning-compass-rust
-RUSTFLAGS='-C target-feature=+crt-static' cargo build --release --target x86_64-unknown-linux-musl
 
+RUSTFLAGS='-C target-feature=+crt-static' cargo build --release --target x86_64-unknown-linux-musl
 
 # Default data
 
@@ -12,6 +12,8 @@ RUSTFLAGS='-C target-feature=+crt-static' cargo build --release --target x86_64-
 - PLUS
 - PRO
 - ENTERPRISE
+
+INSERT into ev_subscriptions ( subscription) VALUES ('FREE'), ('PLUS'), ('PRO'), ('ENTERPRISE');
 
 ## workspace_roles
 
@@ -25,3 +27,5 @@ RUSTFLAGS='-C target-feature=+crt-static' cargo build --release --target x86_64-
 - USER // ev-user
 - ADMIN // ev-admin
 - SUPPORT // ev-support
+
+INSERT into roles (name) VALUES ('USER'), ('ADMIN'), ('SUPPORT');

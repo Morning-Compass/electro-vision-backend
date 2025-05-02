@@ -29,6 +29,10 @@ services:
       DATABASE_URL: postgresql://postgres:password@db:5432/morning-compass
     depends_on:
       - db
+    command: >
+      bash -c "./wait-for-it.sh db:5432 -- diesel setup && diesel migration generate users && chmod +x migration-script.sh && ./migration-script.sh && diesel migration run && diesel migration redo"
+
+    #      bash -c " diesel setup && diesel migration generate users && chmod +x migration-script.sh && ./migration-script.sh && diesel migration run && diesel migration redo"
     networks:
       - morning-compass-network
 

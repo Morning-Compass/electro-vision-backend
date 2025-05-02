@@ -244,7 +244,7 @@ diesel::table! {
         #[max_length = 150]
         plan_file_name -> Varchar,
         start_date -> Timestamp,
-        finish_date -> Nullable<Date>,
+        finish_date -> Nullable<Timestamp>,
         #[max_length = 40]
         geolocation -> Nullable<Varchar>,
         owner_id -> Int4,

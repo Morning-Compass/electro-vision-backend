@@ -1,14 +1,15 @@
 use crate::{
-    constants::WORKSPACE_INVITATION_EXPIRATION_TIME, models_insertable::NewInvitation,
+    auth::{
+        confirmation_token::token::{Cft, ConfirmationToken, TokenEmailType, TokenType},
+        find_user::{Find, FindData},
+    },
     response::Response as Res,
 };
 use actix_web::{post, web::Json, HttpResponse};
 use diesel::{prelude::Insertable, Connection, RunQueryDsl};
 use serde::Deserialize;
 
-use crate::{
-    est_conn, DPool,
-};
+use crate::{est_conn, DPool};
 
 #[derive(Deserialize)]
 struct InviteToWorkspaceRequest {
@@ -17,34 +18,37 @@ struct InviteToWorkspaceRequest {
     inviter_email: String,
 }
 
-#[post("/invite-to-workspace")]
+#[post("/invite_to_workspace")]
 pub async fn workspace_invitation(
     pool: DPool,
     req: Json<InviteToWorkspaceRequest>,
 ) -> HttpResponse {
-    let conn = &mut est_conn(pool.clone());
+    let result = <Cft as ConfirmationToken>::send(
+        "Worker".to_string(),
+        req.invited_email.clone(),
+        pool.clone(),
+        TokenEmailType::WorkspaceInvitation,
+        None,
+        false,
+        TokenType::WorkspaceInvitation(req.workspace_id.clone()),
+    )
+    .await;
 
-    let invitation = NewInvitation {
-        user_email: req.invited_email.clone(),
-        token: uuid::Uuid::new_v4().to_string(),
-        created_at: chrono::Utc::now().naive_utc(),
-        expires_at: chrono::Utc::now().naive_utc()
-            + chrono::Duration::seconds(WORKSPACE_INVITATION_EXPIRATION_TIME),
-        workspace_id: req.workspace_id,
-    };
+    let workspace =
+        <FindData as Find>::find_workspace_by_owner_email(req.inviter_email.clone(), pool).await;
 
-    let result = conn.transaction::<_, diesel::result::Error, _>(|c| {
-        diesel::insert_into(crate::schema::workspace_invitations::dsl::workspace_invitations)
-            .values(&invitation)
-            .execute(c)
-    });
+    // add errorhndling to find, custom class
+    match workspace {
+        Ok(_) => {}
+        Err(e) => {
+            eprintln!("Erroer while inviting: {:?}", e);
+            return HttpResponse::BadRequest().json(Res::new("Couldnt invite to workspace due to server error. Are you sure that you are owner of workspace?"));
+        }
+    }
 
     match result {
         Ok(_) => HttpResponse::Ok().json(Res::new("Invitation created successfully")),
-        Err(err) => {
-            eprintln!("Error creating Invitation: {}", err);
-            HttpResponse::InternalServerError()
-                .json(Res::new("Server error while creating Invitation"))
-        }
+        Err(_) => HttpResponse::InternalServerError()
+            .json(Res::new("Server error while creating Invitation")),
     }
 }

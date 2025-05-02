@@ -8,7 +8,7 @@ pub struct NewWorkspace<'a> {
     pub geolocation: Option<&'a str>,
     pub plan_file_name: Option<&'a str>,
     pub start_date: NaiveDateTime,
-    pub finish_date: Option<NaiveDate>,
+    pub finish_date: Option<NaiveDateTime>,
     pub ev_subscription_id: i32,
     pub name: String,
 }

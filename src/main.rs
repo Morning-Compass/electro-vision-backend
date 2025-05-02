@@ -79,6 +79,8 @@ async fn main() -> std::io::Result<()> {
             .service(auth::reset_password::email_reset_password)
             .service(auth::verify_session::verify_session)
             .service(buisness_logic::create_workspace::create_workspace)
+            .service(buisness_logic::workspace_invitation::workspace_invitation)
+            .service(buisness_logic::add_user_to_workspace::add_user_to_workspace)
     })
     .bind(DOMAIN)?
     .run()

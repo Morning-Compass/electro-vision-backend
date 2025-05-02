@@ -94,15 +94,15 @@ pub async fn add_user_to_workspace(pool: DPool, req: actix_web::web::Path<Token>
             });
 
             match result {
-                Ok(_) => HttpResponse::Ok().json(Res::new("Workspace created successfully")),
+                Ok(_) => HttpResponse::Ok().json(Res::new("invitation accepted")),
                 Err(err) => {
-                    eprintln!("Error creating workspace: {}", err);
+                    eprintln!("Error accepting invitation: {}", err);
                     HttpResponse::InternalServerError()
-                        .json(Res::new("Server error while creating workspace"))
+                        .json(Res::new("Server error while accepting invitation"))
                 }
             }
         }
-        Err(e) => {
+        Err(_) => {
             return HttpResponse::InternalServerError().json(Res::new("Something went wrong"))
         }
     }

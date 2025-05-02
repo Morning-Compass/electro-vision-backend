@@ -1,9 +1,14 @@
 use crate::auth::find_user::Find;
 use crate::auth::find_user::FindData;
+use crate::constants::WORKSPACE_ROLES;
+use crate::models_insertable;
 use crate::models_insertable::NewWorkspace;
 use crate::response::Response as Res;
+use crate::schema::workspace_roles;
+use crate::schema::workspace_roles::dsl as workspace_roles_table;
 use crate::schema::workspaces::dsl as workspaces_table;
 use actix_web::{post, web::Json, HttpResponse};
+use chrono::NaiveDateTime;
 use chrono::{NaiveDate, Utc};
 use diesel::{Connection, RunQueryDsl};
 use serde::Deserialize;
@@ -14,7 +19,7 @@ use crate::{est_conn, DPool};
 struct CreateWorkspaceRequest {
     owner_email: String,
     name: String,
-    finish_date: Option<NaiveDate>,
+    finish_date: Option<NaiveDateTime>,
     plan_file_name: Option<String>,
     geolocation: Option<String>,
 }
@@ -38,7 +43,7 @@ pub async fn create_workspace(pool: DPool, req: Json<CreateWorkspaceRequest>) ->
 
     let result = conn.transaction::<_, diesel::result::Error, _>(|conn| {
         let new_workspace = NewWorkspace {
-            owner_id: user.id,
+            owner_id: user.id.clone(),
             geolocation: req.geolocation.as_deref(),
             plan_file_name: req.plan_file_name.as_deref(),
             start_date: Utc::now().naive_utc(),
@@ -46,11 +51,20 @@ pub async fn create_workspace(pool: DPool, req: Json<CreateWorkspaceRequest>) ->
             ev_subscription_id: 1,
             name: req.name.clone(),
         };
-        let workspace = diesel::insert_into(workspaces_table::workspaces)
+        diesel::insert_into(workspaces_table::workspaces)
             .values(&new_workspace)
-            .execute(conn);
+            .execute(conn)?;
 
-        Ok(workspace)
+        let workspace_role = models_insertable::WorkspaceRole {
+            user_id: user.id,
+            name: WORKSPACE_ROLES[0].to_string(),
+        };
+
+        diesel::insert_into(workspace_roles_table::workspace_roles)
+            .values(workspace_role)
+            .execute(conn)?;
+
+        Ok(())
     });
 
     match result {

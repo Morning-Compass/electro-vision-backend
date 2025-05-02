@@ -74,7 +74,7 @@ pub struct Workspace {
     pub id: i32,
     pub plan_file_name: String,
     pub start_date: NaiveDateTime,
-    pub finish_date: Option<NaiveDate>,
+    pub finish_date: Option<NaiveDateTime>,
     pub geolocation: Option<String>,
     pub owner_id: i32,
     pub ev_subscription_id: i32,

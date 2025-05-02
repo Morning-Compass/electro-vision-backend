@@ -18,6 +18,8 @@ use crate::schema::auth_users as user_data;
 use crate::schema::auth_users::dsl as user_table;
 use crate::schema::confirmation_tokens::dsl as ct_table;
 use crate::schema::password_reset_tokens::dsl as psr_table;
+use crate::schema::workspace_invitations as workspace_invitations_data;
+use crate::schema::workspace_invitations::dsl as workspace_invitations_table;
 use schema::confirmation_tokens as ct_data;
 use schema::password_reset_tokens as psr_data;
 use schema::workspace_users as workspace_users_data;
@@ -27,8 +29,6 @@ use crate::auth::auth_error::{
     AccountVerification, InvitationError, VerificationTokenError, VerificationTokenServerError,
 };
 use crate::emails::{email_body_generator, EmailType};
-use crate::schema::workspace_invitations as workspace_invitations_data;
-use crate::schema::workspace_invitations::dsl as workspace_invitations_table;
 use crate::{constants::CONFIRMATION_TOKEN_EXIPIRATION_TIME, est_conn, DPool};
 use crate::{models, schema};
 
@@ -150,16 +150,15 @@ impl ConfirmationToken for Cft {
                 }
             }
             TokenType::WorkspaceInvitation(workspace_id) => {
-                let invitation = NewInvitation {
-                    user_email: ctoken.user_email,
-                    token: ctoken.token,
-                    created_at: ctoken.created_at,
-                    expires_at: ctoken.expires_at,
-                    workspace_id,
-                };
                 let invitation_result =
                     diesel::insert_into(workspace_invitations_table::workspace_invitations)
-                        .values(&invitation)
+                        .values((
+                            workspace_invitations_data::user_email.eq(ctoken.user_email),
+                            workspace_invitations_data::token.eq(ctoken.token),
+                            workspace_invitations_data::created_at.eq(ctoken.created_at),
+                            workspace_invitations_data::expires_at.eq(ctoken.expires_at),
+                            workspace_invitations_data::workspace_id.eq(workspace_id),
+                        ))
                         .execute(&mut est_conn(pool));
                 match invitation_result {
                     Ok(_) => Ok(token_to_return),
