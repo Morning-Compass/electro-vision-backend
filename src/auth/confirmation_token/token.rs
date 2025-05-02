@@ -1,5 +1,16 @@
 use std::env;
 
+use crate::auth::find_user::{Find, FindData};
+use crate::constants::{JWT_EXPIRATION_TIME, SMTP, WORKSPACE_INVITATION_EXPIRATION_TIME};
+use crate::models::WorkspaceUser;
+use crate::schema::auth_users as user_data;
+use crate::schema::auth_users::dsl as user_table;
+use crate::schema::confirmation_tokens::dsl as ct_table;
+use crate::schema::password_reset_tokens::dsl as psr_table;
+use crate::schema::workspace_invitations as workspace_invitations_data;
+use crate::schema::workspace_invitations::dsl as workspace_invitations_table;
+use crate::schema::workspaces as workspace_data;
+use crate::schema::workspaces::dsl as workspace_table;
 use chrono::{Duration, NaiveDateTime, Utc};
 use diesel::dsl::exists;
 use diesel::prelude::OptionalExtension;
@@ -9,17 +20,6 @@ use dotenvy::dotenv;
 use lettre::message::{MultiPart, SinglePart};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::Transport;
-
-use crate::auth::find_user::{Find, FindData};
-use crate::constants::{JWT_EXPIRATION_TIME, SMTP, WORKSPACE_INVITATION_EXPIRATION_TIME};
-use crate::models::WorkspaceUser;
-use crate::models_insertable::NewInvitation;
-use crate::schema::auth_users as user_data;
-use crate::schema::auth_users::dsl as user_table;
-use crate::schema::confirmation_tokens::dsl as ct_table;
-use crate::schema::password_reset_tokens::dsl as psr_table;
-use crate::schema::workspace_invitations as workspace_invitations_data;
-use crate::schema::workspace_invitations::dsl as workspace_invitations_table;
 use schema::confirmation_tokens as ct_data;
 use schema::password_reset_tokens as psr_data;
 use schema::workspace_users as workspace_users_data;
@@ -150,21 +150,23 @@ impl ConfirmationToken for Cft {
                 }
             }
             TokenType::WorkspaceInvitation(workspace_id) => {
-                let invitation_result =
-                    diesel::insert_into(workspace_invitations_table::workspace_invitations)
-                        .values((
-                            workspace_invitations_data::user_email.eq(ctoken.user_email),
-                            workspace_invitations_data::token.eq(ctoken.token),
-                            workspace_invitations_data::created_at.eq(ctoken.created_at),
-                            workspace_invitations_data::expires_at.eq(ctoken.expires_at),
-                            workspace_invitations_data::workspace_id.eq(workspace_id),
-                        ))
-                        .execute(&mut est_conn(pool));
-                match invitation_result {
+                match diesel::insert_into(workspace_invitations_table::workspace_invitations)
+                    .values((
+                        workspace_invitations_data::user_email.eq(ctoken.user_email),
+                        workspace_invitations_data::token.eq(ctoken.token),
+                        workspace_invitations_data::created_at.eq(ctoken.created_at),
+                        workspace_invitations_data::expires_at.eq(ctoken.expires_at),
+                        workspace_invitations_data::workspace_id.eq(workspace_id),
+                    ))
+                    .execute(&mut est_conn(pool))
+                {
                     Ok(_) => Ok(token_to_return),
-                    Err(_) => Err(VerificationTokenError::ServerError(
-                        VerificationTokenServerError::WorkspaceInvitationError,
-                    )),
+                    Err(e) => {
+                        eprintln!("error in inviting to workspace: {:?}", e);
+                        Err(VerificationTokenError::ServerError(
+                            VerificationTokenServerError::WorkspaceInvitationError,
+                        ))
+                    }
                 }
             }
         }
@@ -238,9 +240,24 @@ impl ConfirmationToken for Cft {
                         }
                     };
 
+                // let workspace = match workspace_table::workspaces
+                //     .filter(workspace_data::id.eq(tok.workspace_id))
+                //     .first::<models::Workspace>(&mut est_conn(pool.clone()))
+                //     .optional()
+                // {
+                //     Ok(workspace) => workspace,
+                //     Err(e) => {
+                //         eprintln!("Error loading workspace: {:?}", e);
+                //         return Err(VerificationTokenError::ServerError(
+                //             VerificationTokenServerError::DatabaseError,
+                //         ));
+                //     }
+                // };
+
                 let workspace_users = match workspace_users_table::workspace_users
                     .filter(workspace_users_data::user_id.eq(user.id))
-                    .load::<WorkspaceUser>(&mut est_conn(pool))
+                    .filter(workspace_users_data::workspace_id.eq(tok.workspace_id))
+                    .first::<WorkspaceUser>(&mut est_conn(pool))
                     .optional()
                 {
                     Ok(workspace_users) => workspace_users,

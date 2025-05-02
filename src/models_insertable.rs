@@ -1,4 +1,4 @@
-use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
+use chrono::{NaiveDateTime, NaiveTime};
 use diesel::prelude::Insertable;
 
 #[derive(Insertable)]
@@ -16,11 +16,11 @@ pub struct NewWorkspace<'a> {
 #[derive(Insertable)]
 #[diesel(table_name = crate::schema::workspace_invitations)]
 pub struct NewInvitation {
+    pub workspace_id: i32,
     pub user_email: String,
     pub token: String,
     pub created_at: NaiveDateTime,
     pub expires_at: NaiveDateTime,
-    pub workspace_id: i32,
 }
 
 #[derive(Insertable)]

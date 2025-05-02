@@ -6,10 +6,9 @@ use crate::{
     response::Response as Res,
 };
 use actix_web::{post, web::Json, HttpResponse};
-use diesel::{prelude::Insertable, Connection, RunQueryDsl};
 use serde::Deserialize;
 
-use crate::{est_conn, DPool};
+use crate::DPool;
 
 #[derive(Deserialize)]
 struct InviteToWorkspaceRequest {
@@ -18,11 +17,27 @@ struct InviteToWorkspaceRequest {
     inviter_email: String,
 }
 
-#[post("/invite_to_workspace")]
+#[post("/invitation/create")]
 pub async fn workspace_invitation(
     pool: DPool,
     req: Json<InviteToWorkspaceRequest>,
 ) -> HttpResponse {
+    let invited =
+        <FindData as Find>::exists_by_email(req.invited_email.clone(), pool.clone()).await;
+
+    match invited {
+        Ok(true) => {}
+        Ok(false) => {
+            return HttpResponse::BadRequest()
+                .json(Res::new("User you are trying to invite doesnt exist"));
+        }
+        Err(e) => {
+            eprintln!("Error while checking if user exists: {:?}", e);
+            return HttpResponse::InternalServerError()
+                .json(Res::new("Server error while checking if user exists"));
+        }
+    }
+
     let result = <Cft as ConfirmationToken>::send(
         "Worker".to_string(),
         req.invited_email.clone(),

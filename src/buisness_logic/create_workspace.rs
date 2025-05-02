@@ -4,12 +4,11 @@ use crate::constants::WORKSPACE_ROLES;
 use crate::models_insertable;
 use crate::models_insertable::NewWorkspace;
 use crate::response::Response as Res;
-use crate::schema::workspace_roles;
 use crate::schema::workspace_roles::dsl as workspace_roles_table;
 use crate::schema::workspaces::dsl as workspaces_table;
 use actix_web::{post, web::Json, HttpResponse};
 use chrono::NaiveDateTime;
-use chrono::{NaiveDate, Utc};
+use chrono::Utc;
 use diesel::{Connection, RunQueryDsl};
 use serde::Deserialize;
 

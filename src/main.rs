@@ -52,6 +52,8 @@ async fn main() -> std::io::Result<()> {
         .build(manager)
         .expect("Failed to create pool");
 
+    println!("now: {}", Utc::now().naive_utc());
+
     HttpServer::new(move || {
         let cors = actix_cors::Cors::default()
             .allowed_origin("http://localhost:3000")

@@ -303,7 +303,7 @@ create table workspace_users
         constraint workspace_users_workspace_roles_id_fk
             references workspace_roles
             on update cascade on delete cascade,
-    position_id         serial
+    position_id         integer NULL
         constraint workspace_users_positions_id_fk
             references positions
             on update cascade on delete cascade,
@@ -408,7 +408,11 @@ create table workspace_invitations
     token        varchar                 not null,
     created_at   timestamp default now() not null,
     expires_at   timestamp               not null,
-    confirmed_at timestamp
+    confirmed_at timestamp,
+    workspace_id serial not null
+        constraint workspace_invitations_workspaces_id_fk
+            references workspaces
+            on update cascade on delete cascade
 );
 
 

@@ -1,5 +1,3 @@
-// @generated automatically by Diesel CLI.
-
 diesel::table! {
     attendance (id) {
         id -> Int4,
@@ -32,18 +30,6 @@ diesel::table! {
         created_at -> Timestamp,
         expires_at -> Timestamp,
         confirmed_at -> Nullable<Timestamp>,
-    }
-}
-
-diesel::table! {
-    workspace_invitations (id) {
-        id -> Int4,
-        user_email -> Varchar,
-        token -> Varchar,
-        created_at -> Timestamp,
-        expires_at -> Timestamp,
-        confirmed_at -> Nullable<Timestamp>,
-        workspace_id -> Int4,
     }
 }
 
@@ -217,6 +203,18 @@ diesel::table! {
 }
 
 diesel::table! {
+    workspace_invitations (id) {
+        id -> Int4,
+        user_email -> Varchar,
+        token -> Varchar,
+        created_at -> Timestamp,
+        expires_at -> Timestamp,
+        confirmed_at -> Nullable<Timestamp>,
+        workspace_id -> Int4,
+    }
+}
+
+diesel::table! {
     workspace_roles (id) {
         id -> Int4,
         user_id -> Int4,
@@ -269,6 +267,7 @@ diesel::joinable!(user_roles -> roles (role_id));
 diesel::joinable!(users_citizenships -> auth_users (user_id));
 diesel::joinable!(users_citizenships -> countries (country_id));
 diesel::joinable!(worker_workspace_data -> auth_users (user_id));
+diesel::joinable!(workspace_invitations -> workspaces (workspace_id));
 diesel::joinable!(workspace_roles -> auth_users (user_id));
 diesel::joinable!(workspace_users -> auth_users (user_id));
 diesel::joinable!(workspace_users -> positions (position_id));
@@ -299,8 +298,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     user_roles,
     users_citizenships,
     worker_workspace_data,
+    workspace_invitations,
     workspace_roles,
     workspace_users,
     workspaces,
-    workspace_invitations
 );

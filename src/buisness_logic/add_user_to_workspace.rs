@@ -27,7 +27,7 @@ struct Token {
     token: String,
 }
 
-#[post("/invitation/accept/{token}")]
+#[actix_web::put("/invitation/accept/{token}")]
 pub async fn add_user_to_workspace(pool: DPool, req: actix_web::web::Path<Token>) -> HttpResponse {
     let workspace_invitation = match workspace_invitations_table::workspace_invitations
         .filter(workspace_invitations_data::token.eq(req.token.clone()))
@@ -37,7 +37,8 @@ pub async fn add_user_to_workspace(pool: DPool, req: actix_web::web::Path<Token>
         Ok(Some(invitation)) => invitation,
         Ok(None) => return HttpResponse::BadRequest().json(Res::new("Token invalid")),
         Err(e) => {
-            return HttpResponse::InternalServerError().json(Res::new("Something went wrong"))
+            eprintln!("error while accepting invitation: {:?}", e);
+            return HttpResponse::InternalServerError().json(Res::new("Something went wrong"));
         }
     };
 
@@ -102,8 +103,10 @@ pub async fn add_user_to_workspace(pool: DPool, req: actix_web::web::Path<Token>
                 }
             }
         }
-        Err(_) => {
-            return HttpResponse::InternalServerError().json(Res::new("Something went wrong"))
+        Err(e) => {
+            eprintln!("error while accepting invitation: {:?}", e);
+            return HttpResponse::InternalServerError()
+                .json(Res::new("Something went wrong, prolly wrong id"));
         }
     }
 }
