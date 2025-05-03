@@ -12,7 +12,7 @@ use actix_web::{
     HttpResponse,
 };
 use diesel::{result::Error as DieselError, ExpressionMethods};
-use diesel::{Connection, QueryDsl, RunQueryDsl};
+use diesel::{QueryDsl, RunQueryDsl};
 use serde::{Deserialize, Serialize};
 
 use crate::{est_conn, DPool};

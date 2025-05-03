@@ -168,9 +168,19 @@ create table tasks
     assignment_date        timestamp default now() not null,
     due_date               timestamp,
     status_id              serial
-        constraint tasks_status_id_fk
-            references status
-            on update cascade on delete cascade
+    title                  varchar(50)             not null
+    constraint tasks_status_id_fk
+        references status
+        on update cascade on delete cascade
+
+    category_id            serial
+            constraint tasks_tasks_category_id_fk
+                references tasks_category
+                on update cascade on delete cascade
+    importance_id          serial
+            constraint tasks_importance_id_fk
+                references importance
+                on update cascade on delete cascade
 );
 
 alter table tasks

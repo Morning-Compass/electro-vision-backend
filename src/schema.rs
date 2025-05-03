@@ -168,6 +168,9 @@ diesel::table! {
         assignment_date -> Timestamp,
         due_date -> Nullable<Timestamp>,
         status_id -> Int4,
+        title -> Varchar,
+        category_id -> Int4,
+        importance_id -> Int4,
     }
 }
 

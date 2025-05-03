@@ -88,12 +88,15 @@ pub struct Task {
     pub id: i32,
     pub workspace_id: i32,
     pub assigner_id: i32,
-    pub worker_id: i32,
+    pub worker_id: i32, // asignee
     pub description: Option<String>,
     pub description_multimedia: Option<Vec<u8>>,
     pub assignment_date: NaiveDateTime,
     pub due_date: Option<NaiveDateTime>,
     pub status_id: i32,
+    pub title: String,
+    pub category_id: i32,
+    pub importance_id: i32,
 }
 
 #[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]

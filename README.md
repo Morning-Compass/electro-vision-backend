@@ -29,4 +29,27 @@ INSERT into ev_subscriptions ( subscription) VALUES ('FREE'), ('PLUS'), ('PRO'),
 - ADMIN // ev-admin
 - SUPPORT // ev-support
 
+## status (task status)
+
+- HELP_NEEDED
+- TODO
+- IN_PROGRESS
+- COMPLETED
+- CANCELED
+
 INSERT into roles (name) VALUES ('USER'), ('ADMIN'), ('SUPPORT');
+
+## importance
+
+- LOW
+- MEDIUM
+- HIGH
+
+INSERT into importance (name) VALUES ('LOW'), ('MEDIUM'), ('HIGH');
+
+## task_category
+
+- NONE, WORKSPACE_ID,
+- ELECTRICAL, WORKSPACE_ID,
+- VERIFICATION, WORKSPACE_ID,
+- OTHER, WORKSPACE_ID,

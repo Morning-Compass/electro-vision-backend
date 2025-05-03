@@ -1,20 +1,16 @@
-use crate::auth::find_user::{Find, FindData};
 use crate::response::Response as Res;
 use crate::schema::auth_users::dsl as auth_users_table;
-use crate::schema::workspace_users as workspace_users_data;
-use crate::schema::workspace_users::dsl as workspace_users_table;
-use crate::schema::workspaces as workspaces_data;
 use crate::schema::workspaces::dsl as workspaces_table;
 use crate::{schema::auth_users as auth_users_data, DBPConn};
 
 use actix_web::{
     post,
-    web::{Json, Path},
+    web::Json,
     HttpResponse,
 };
 use diesel::{result::Error as DieselError, ExpressionMethods};
-use diesel::{Connection, QueryDsl, RunQueryDsl, SelectableHelper};
-use serde::{Deserialize, Serialize};
+use diesel::{QueryDsl, RunQueryDsl, SelectableHelper};
+use serde::Deserialize;
 
 use crate::{est_conn, models, DPool};
 
