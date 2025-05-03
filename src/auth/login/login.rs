@@ -2,7 +2,7 @@ use crate::auth::jwt::generate;
 use crate::auth::ResponseUser;
 use crate::auth::UserWithRoles;
 use crate::constants::APPLICATION_JSON;
-use crate::models::User;
+use crate::models::AuthUser as User;
 use crate::{est_conn, response, schema, DPool};
 use actix_web::web;
 use actix_web::{post, web::Json, HttpResponse};
@@ -33,14 +33,14 @@ pub async fn list_user(
     identifier: LoginMethodIdentifier,
     pool: DPool,
 ) -> Result<UserWithRoles, Error> {
-    use crate::schema::users::dsl::*;
+    use crate::schema::auth_users::dsl::*;
 
     let user_result = match identifier {
-        LoginMethodIdentifier::Username(user_username) => users
+        LoginMethodIdentifier::Username(user_username) => auth_users
             .filter(username.eq(&user_username))
             .first::<User>(&mut est_conn(pool.clone()))
             .optional()?,
-        LoginMethodIdentifier::Email(user_email) => users
+        LoginMethodIdentifier::Email(user_email) => auth_users
             .filter(email.eq(&user_email))
             .first::<User>(&mut est_conn(pool.clone()))
             .optional()?,
@@ -70,7 +70,7 @@ pub async fn list_user(
 
 #[post("/login-username")]
 pub async fn login_username(request: Json<RequestLoginUsername>, pool: DPool) -> HttpResponse {
-    use crate::response_handler::ResponseHandler;
+    
 
     let user_username = request.username.clone();
     let user = web::block(move || list_user(LoginMethodIdentifier::Username(user_username), pool))

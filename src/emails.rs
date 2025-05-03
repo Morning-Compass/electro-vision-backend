@@ -5,6 +5,7 @@ pub enum EmailType {
     AccountVerificationResend(String, String),
     ChangePassword(String, String),
     ChangePasswordResend(String, String),
+    WorkspaceInvitation(String, String),
 }
 
 pub fn email_body_generator(email_type: EmailType) -> String {
@@ -147,6 +148,42 @@ pub fn email_body_generator(email_type: EmailType) -> String {
                 </p>
                 <p class="text-muted">This link will expire in 15 minutes.</p>
                 <p>If you didn't request this, please secure your account.</p>
+                <p>Best Regards,<br>Electro-Vision Team</p>
+            </article>
+        </section>
+        <footer class="footer">
+            <p>Need assistance? <a href="mailto:support@electro-vision.com">Contact us</a></p>
+            <p>Electro-Vision, Szczecin</p>
+        </footer>
+    </div>
+</body>
+</html>
+            "#,
+            EMAIL_CSS_TEMPLATE, username, token
+        ),
+        EmailType::WorkspaceInvitation(username, token) => format!(
+            r#"
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>{}</style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Workspace Invitation</h1>
+        </header>
+        <section class="body">
+            <article>
+                <p>Hello {},</p>
+                <p>You have been invited to join a workspace</p>
+                <p style="text-align: center;">
+                    <a href="{}" class="action-button">Accept</a>
+                </p>
+                <p class="text-muted">This link will expire in 7 days.</p>
                 <p>Best Regards,<br>Electro-Vision Team</p>
             </article>
         </section>

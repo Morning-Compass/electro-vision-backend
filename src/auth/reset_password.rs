@@ -1,21 +1,18 @@
-use crate::auth::auth_error::AccountVerification;
+use crate::auth::auth_error::{AccountVerification, VerificationTokenError};
 use crate::auth::confirmation_token::token::TokenEmailType;
 use crate::auth::find_user::Find;
 use crate::est_conn;
-use crate::models::User;
+use crate::models::AuthUser as User;
 use crate::response::Response as Res;
-use crate::schema::users as user_data;
-use crate::schema::users::dsl as user_table;
+use crate::schema::auth_users as user_data;
+use crate::schema::auth_users::dsl as user_table;
 use actix_web::{post, put, web::Json, web::Path, HttpResponse};
 use diesel::query_dsl::methods::FilterDsl;
 use diesel::{ExpressionMethods, RunQueryDsl};
 use serde::Deserialize;
 
 use crate::{
-    auth::{
-        confirmation_token::token::{Cft, TokenType},
-        VerificationTokenError,
-    },
+    auth::confirmation_token::token::{Cft, TokenType},
     constants::APPLICATION_JSON,
     DPool,
 };
@@ -44,7 +41,7 @@ async fn change_password(email: String, password: String, pool: DPool) -> Result
         Ok(hp) => hp,
         Err(_) => return Err(()),
     };
-    match diesel::update(user_table::users.filter(user_data::email.eq(email)))
+    match diesel::update(user_table::auth_users.filter(user_data::email.eq(email)))
         .set(user_data::password.eq(hashed_password))
         .execute(&mut est_conn(pool))
     {
@@ -64,7 +61,9 @@ pub async fn email_reset_password(
         token.token.clone(),
         TokenType::PasswordReset(req.email.clone()),
         pool_clone,
-    ) {
+    )
+    .await
+    {
         Ok(_) => match change_password(req.email.clone(), req.new_password.clone(), pool).await {
             Ok(_) => HttpResponse::Ok()
                 .content_type(APPLICATION_JSON)
@@ -90,6 +89,7 @@ pub async fn email_reset_password(
             VerificationTokenError::ServerError(_) => {
                 HttpResponse::InternalServerError().json(Res::new("An unexpected error occurred"))
             }
+            _ => HttpResponse::BadRequest().json(Res::new("Bad Request")),
         },
     }
 }
@@ -97,11 +97,15 @@ pub async fn email_reset_password(
 #[post("/reset_password")]
 pub async fn reset_password(pool: DPool, request: Json<ResetPasswordRequest>) -> HttpResponse {
     let pool_clone = pool.clone();
-    let user: User =
-        match <FindData as Find>::find_by_email(request.email.clone(), pool_clone).await {
-            Ok(u) => u,
-            Err(_) => return HttpResponse::InternalServerError().json(Res::new("Unknown error")),
-        };
+    let user: User = match <FindData as Find>::find_auth_user_by_email(
+        request.email.clone(),
+        pool_clone,
+    )
+    .await
+    {
+        Ok(u) => u,
+        Err(_) => return HttpResponse::InternalServerError().json(Res::new("Unknown error")),
+    };
 
     match <Cft as ConfirmationToken>::send(
         user.username,

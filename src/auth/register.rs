@@ -11,7 +11,7 @@ use crate::auth::auth_error::AccountVerification;
 use crate::auth::confirmation_token::token::{Cft, TokenType};
 use crate::auth::jwt::generate;
 use crate::auth::{ResponseUser, UserWithRoles};
-use crate::models::User;
+use crate::models::AuthUser as User;
 use crate::response::Response as Res;
 use crate::user::NoIdUser;
 use crate::{auth, est_conn, schema, DPool};
@@ -24,14 +24,14 @@ struct RegisterRequest {
 }
 
 pub async fn insert_user(new_user: NoIdUser, pool: DPool) -> Result<User, Error> {
-    use crate::schema::users::dsl::*;
+    use crate::schema::auth_users::dsl::*;
 
     let hashed_password = match bcrypt::hash(new_user.password, bcrypt::DEFAULT_COST) {
         Ok(hp) => hp,
         Err(_) => return Err(diesel::result::Error::RollbackTransaction),
     };
 
-    match diesel::insert_into(users)
+    match diesel::insert_into(auth_users)
         .values((
             username.eq(new_user.username),
             email.eq(new_user.email),
@@ -107,7 +107,8 @@ pub async fn register(request: Json<RegisterRequest>, pool: DPool) -> HttpRespon
                     false,
                     TokenType::AccountVerification,
                     pool.clone(),
-                ),
+                )
+                .await,
             ) {
                 (Ok(_), Ok(tok)) => {
                     use crate::auth::auth_error::VerificationTokenError;
@@ -161,6 +162,8 @@ pub async fn register(request: Json<RegisterRequest>, pool: DPool) -> HttpRespon
                                 HttpResponse::BadRequest()
                                     .json(Res::new("Verification token already exists"))
                             }
+                            VerificationTokenError::Invitation(_) => HttpResponse::BadRequest()
+                                .json(Res::new("You can not invite when you register")),
                         },
                     }
                 }

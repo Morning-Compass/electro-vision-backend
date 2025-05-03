@@ -21,8 +21,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    volumes:
-      - "./:/app"
     ports:
       - "3500:3500"
     environment:
@@ -32,13 +30,14 @@ services:
     depends_on:
       - db
     command: >
-      bash -c "./wait-for-it.sh db:5432 -- diesel setup && diesel migration generate users && chmod +x migration-script.sh && ./migration-script.sh && diesel migration run && diesel migration redo && cargo run"
+      bash -c "./wait-for-it.sh db:5432 -- diesel setup && diesel migration generate users && chmod +x migration-script.sh && ./migration-script.sh && diesel migration run && diesel migration redo"
+
+    #      bash -c " diesel setup && diesel migration generate users && chmod +x migration-script.sh && ./migration-script.sh && diesel migration run && diesel migration redo"
     networks:
       - morning-compass-network
 
 volumes:
   postgres:
-    driver: local
 
 networks:
   morning-compass-network:
