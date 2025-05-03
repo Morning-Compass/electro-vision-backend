@@ -1,5 +1,5 @@
 use crate::auth::auth_error::{
-    AccountVerification, InvitationError, VerificationTokenError, VerificationTokenServerError,
+    InvitationError, VerificationTokenError,
 };
 use crate::auth::confirmation_token::token::Cft;
 use crate::auth::confirmation_token::token::ConfirmationToken;

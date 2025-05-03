@@ -9,8 +9,6 @@ use crate::schema::confirmation_tokens::dsl as ct_table;
 use crate::schema::password_reset_tokens::dsl as psr_table;
 use crate::schema::workspace_invitations as workspace_invitations_data;
 use crate::schema::workspace_invitations::dsl as workspace_invitations_table;
-use crate::schema::workspaces as workspace_data;
-use crate::schema::workspaces::dsl as workspace_table;
 use chrono::{Duration, NaiveDateTime, Utc};
 use diesel::dsl::exists;
 use diesel::prelude::OptionalExtension;
