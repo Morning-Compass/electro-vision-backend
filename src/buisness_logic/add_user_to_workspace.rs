@@ -1,3 +1,6 @@
+use crate::auth::auth_error::{
+    AccountVerification, InvitationError, VerificationTokenError, VerificationTokenServerError,
+};
 use crate::auth::confirmation_token::token::Cft;
 use crate::auth::confirmation_token::token::ConfirmationToken;
 use crate::auth::confirmation_token::token::TokenType;
@@ -12,9 +15,8 @@ use crate::schema::workspace_invitations as workspace_invitations_data;
 use crate::schema::workspace_invitations::dsl as workspace_invitations_table;
 use crate::schema::workspace_roles::dsl as workspace_roles_table;
 use crate::schema::workspace_users::dsl as workspace_users_table;
-use actix_web::{post, HttpResponse};
+use actix_web::{put, HttpResponse};
 use diesel::ExpressionMethods;
-use diesel::Insertable;
 use diesel::OptionalExtension;
 use diesel::QueryDsl;
 use diesel::{Connection, RunQueryDsl};
@@ -27,7 +29,7 @@ struct Token {
     token: String,
 }
 
-#[actix_web::put("/invitation/accept/{token}")]
+#[put("/invitation/accept/{token}")]
 pub async fn add_user_to_workspace(pool: DPool, req: actix_web::web::Path<Token>) -> HttpResponse {
     let workspace_invitation = match workspace_invitations_table::workspace_invitations
         .filter(workspace_invitations_data::token.eq(req.token.clone()))
@@ -103,10 +105,27 @@ pub async fn add_user_to_workspace(pool: DPool, req: actix_web::web::Path<Token>
                 }
             }
         }
-        Err(e) => {
-            eprintln!("error while accepting invitation: {:?}", e);
-            return HttpResponse::InternalServerError()
-                .json(Res::new("Something went wrong, prolly wrong id"));
-        }
+        Err(e) => match e {
+            VerificationTokenError::Invitation(InvitationError::UserAlreadyInWorkspace) => {
+                eprintln!(
+                    "error while accepting invitation, User already in workspace: {:?}",
+                    e
+                );
+                HttpResponse::Unauthorized().json(Res::new("User already in workspace"))
+            }
+            VerificationTokenError::NotFound => {
+                eprintln!("error while accepting invitation: {:?}", e);
+                HttpResponse::Unauthorized().json(Res::new("Expired token"))
+            }
+            VerificationTokenError::Expired => {
+                eprintln!("error while accepting invitation, token expired: {:?}", e);
+                HttpResponse::Unauthorized().json(Res::new("Expired token"))
+            }
+            _ => {
+                eprintln!("error while accepting invitation: {:?}", e);
+                HttpResponse::InternalServerError()
+                    .json(Res::new("Something went wrong, prolly wrong id"))
+            }
+        },
     }
 }

@@ -138,7 +138,9 @@ create table workspaces
         constraint workspaces_ev_subscriptions_id_fk
             references ev_subscriptions
             on update cascade on delete cascade,
-    name               varchar(60)                                                   not null
+    name               varchar(60)                                                   not null,
+    constraint workspaces_pk
+        unique (owner_id, name)
 );
 
 alter table workspaces

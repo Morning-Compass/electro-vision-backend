@@ -1,4 +1,4 @@
-use crate::auth::auth_error::AccountVerification;
+use crate::auth::auth_error::{AccountVerification, VerificationTokenError};
 use crate::auth::confirmation_token::token::TokenEmailType;
 use crate::auth::find_user::Find;
 use crate::est_conn;
@@ -12,10 +12,7 @@ use diesel::{ExpressionMethods, RunQueryDsl};
 use serde::Deserialize;
 
 use crate::{
-    auth::{
-        confirmation_token::token::{Cft, TokenType},
-        VerificationTokenError,
-    },
+    auth::confirmation_token::token::{Cft, TokenType},
     constants::APPLICATION_JSON,
     DPool,
 };
