@@ -3,6 +3,7 @@
 RUSTFLAGS='-C target-feature=+crt-static' cargo build --release --target x86_64-unknown-linux-musl
 
 # Default data
+# ! MUST be inserted before actual usage !
 
 ! order must be maintained in db !
 
