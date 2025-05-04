@@ -59,7 +59,6 @@ struct CreateTaskRequest {
 pub async fn create_task(pool: DPool, req: Json<CreateTaskRequest>) -> HttpResponse {
     let conn = &mut est_conn(pool.clone());
 
-    // Find assigner and assignee before transaction
     let assigner =
         match <FindData as Find>::find_auth_user_by_email(req.assigner_email.clone(), pool.clone())
             .await
@@ -76,9 +75,7 @@ pub async fn create_task(pool: DPool, req: Json<CreateTaskRequest>) -> HttpRespo
             Err(_) => return HttpResponse::BadRequest().json(Res::new("Assignee not found")),
         };
 
-    // Wrap all database operations in a transaction
     let result = conn.transaction::<_, DieselError, _>(|conn| {
-        // Validate workspace exists within transaction
         let workspace_exists: bool = diesel::select(diesel::dsl::exists(
             workspaces_table::workspaces.filter(workspaces_data::id.eq(req.workspace_id)),
         ))
@@ -88,7 +85,6 @@ pub async fn create_task(pool: DPool, req: Json<CreateTaskRequest>) -> HttpRespo
             return Err(DieselError::NotFound);
         }
 
-        // Handle task category within transaction
         let category_id = match req.category.as_deref() {
             Some(category_name) => {
                 match tasks_category_table::tasks_category
@@ -98,16 +94,13 @@ pub async fn create_task(pool: DPool, req: Json<CreateTaskRequest>) -> HttpRespo
                     .first::<i32>(conn)
                 {
                     Ok(id) => id,
-                    Err(_) => {
-                        // Create new category if it doesn't exist
-                        diesel::insert_into(tasks_category_table::tasks_category)
-                            .values((
-                                tasks_category_data::workspace_id.eq(req.workspace_id),
-                                tasks_category_data::name.eq(category_name),
-                            ))
-                            .returning(tasks_category_data::id)
-                            .get_result(conn)?
-                    }
+                    Err(_) => diesel::insert_into(tasks_category_table::tasks_category)
+                        .values((
+                            tasks_category_data::workspace_id.eq(req.workspace_id),
+                            tasks_category_data::name.eq(category_name),
+                        ))
+                        .returning(tasks_category_data::id)
+                        .get_result(conn)?,
                 }
             }
             None => {
@@ -130,7 +123,6 @@ pub async fn create_task(pool: DPool, req: Json<CreateTaskRequest>) -> HttpRespo
             }
         };
 
-        // Map enums to their database IDs with defaults
         let status_id = req.status.as_ref().map_or(2, |s| match s {
             Status::HelpNeeded => 1,
             Status::Todo => 2,
@@ -145,7 +137,6 @@ pub async fn create_task(pool: DPool, req: Json<CreateTaskRequest>) -> HttpRespo
             Importance::High => 3,
         });
 
-        // Create the task
         let new_task = models_insertable::Task {
             workspace_id: req.workspace_id,
             assigner_id: assigner.id,
