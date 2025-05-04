@@ -1,432 +1,220 @@
-create table roles
-(
-    id   serial
-        primary key,
-    name varchar default 'USER'::character varying not null
+-- up.sql
+CREATE TABLE roles (
+    id   serial PRIMARY KEY,
+    name varchar DEFAULT 'USER'::character varying NOT NULL
 );
 
-alter table roles
-    owner to postgres;
-
-create table auth_users
-(
-    id            serial
-        constraint users_pkey
-            primary key,
-    username      varchar                                           not null,
-    email         varchar                                           not null
-        constraint users_email_key
-            unique,
-    password      varchar                                           not null,
-    created_at    timestamp                                         not null,
-    account_valid boolean                                           not null
+CREATE TABLE auth_users (
+    id            serial PRIMARY KEY,
+    username      varchar NOT NULL,
+    email         varchar NOT NULL UNIQUE,
+    password      varchar NOT NULL,
+    created_at    timestamp NOT NULL,
+    account_valid boolean NOT NULL
 );
 
-alter table auth_users
-    owner to postgres;
-
-create table password_reset_tokens
-(
-    id           serial
-        primary key,
-    user_email   varchar   not null
-        constraint password_reset_tokens_auth_user_email_fk
-            references auth_users (email)
-            on update cascade on delete cascade,
-    token        varchar   not null,
-    created_at   timestamp not null,
-    expires_at   timestamp not null,
+CREATE TABLE confirmation_tokens (
+    id           serial PRIMARY KEY,
+    user_email   varchar NOT NULL REFERENCES auth_users(email) ON UPDATE CASCADE ON DELETE CASCADE,
+    token        varchar NOT NULL,
+    created_at   timestamp DEFAULT now() NOT NULL,
+    expires_at   timestamp NOT NULL,
     confirmed_at timestamp
 );
 
-alter table password_reset_tokens
-    owner to postgres;
-
-create table confirmation_tokens
-(
-    id           serial
-        primary key,
-    user_email   varchar   not null
-        constraint confirmation_tokens_auth_user_email_fk
-            references auth_users (email)
-            on update cascade on delete cascade,
-    token        varchar   not null,
-    created_at   timestamp not null,
-    expires_at   timestamp not null,
+CREATE TABLE password_reset_tokens (
+    id           serial PRIMARY KEY,
+    user_email   varchar NOT NULL REFERENCES auth_users(email) ON UPDATE CASCADE ON DELETE CASCADE,
+    token        varchar NOT NULL,
+    created_at   timestamp DEFAULT now() NOT NULL,
+    expires_at   timestamp NOT NULL,
     confirmed_at timestamp
 );
 
-alter table confirmation_tokens
-    owner to postgres;
-
-create table user_roles
-(
-    user_id serial not null
-        references auth_users
-            on update cascade on delete cascade,
-    role_id serial not null
-        references roles
-            on update cascade on delete cascade,
-    primary key (user_id, role_id)
-);
-
-alter table user_roles
-    owner to postgres;
-
-create table importance
-(
-    id  serial
-        constraint importance_pk
-            primary key,
+CREATE TABLE importance (
+    id   serial PRIMARY KEY,
     name varchar(20)
 );
 
-alter table importance
-    owner to postgres;
-
-create table status
-(
-    id  serial
-        constraint status_pk
-            primary key,
-    name varchar(20) not null
+CREATE TABLE status (
+    id   serial PRIMARY KEY,
+    name varchar(20) NOT NULL
 );
 
-alter table status
-    owner to postgres;
-
-create table workspace_roles
-(
-    id      serial
-        constraint workspace_roles_pk
-            primary key,
-    user_id serial
-        constraint workspace_roles_auth_users_id_fk
-            references auth_users
-            on update cascade on delete cascade,
-    name    varchar(50) not null
+CREATE TABLE ev_subscriptions (
+    id           serial PRIMARY KEY,
+    subscription varchar(20) NOT NULL
 );
 
-alter table workspace_roles
-    owner to postgres;
-
-create table ev_subscriptions
-(
-    id           serial
-        constraint ev_subscriptions_pk
-            primary key,
-    subscription varchar(20) not null
+CREATE TABLE countries (
+    id   serial PRIMARY KEY,
+    name varchar(50) NOT NULL
 );
 
-alter table ev_subscriptions
-    owner to postgres;
+CREATE TABLE phone_dial_codes (
+    id      serial PRIMARY KEY,
+    code    varchar(6) NOT NULL,
+    country varchar(50) NOT NULL
+);
 
-create table workspaces
-(
-    id                 serial
-        constraint workspace_pk
-            primary key,
-    plan_file_name     varchar(150)                                                  not null,
-    start_date         timestamp default now()                                       not null,
+CREATE TABLE workspace_roles (
+    id      serial PRIMARY KEY,
+    user_id serial REFERENCES auth_users ON UPDATE CASCADE ON DELETE CASCADE,
+    name    varchar(50) NOT NULL
+);
+
+CREATE TABLE user_roles (
+    user_id serial REFERENCES auth_users ON UPDATE CASCADE ON DELETE CASCADE,
+    role_id serial REFERENCES roles ON UPDATE CASCADE ON DELETE CASCADE,
+    PRIMARY KEY (user_id, role_id)
+);
+
+CREATE TABLE workspaces (
+    id                 serial PRIMARY KEY,
+    plan_file_name     varchar(150) NOT NULL,
+    start_date         timestamp DEFAULT now() NOT NULL,
     finish_date        timestamp,
     geolocation        varchar(40),
-    owner_id           serial
-        constraint workspace_auth_user_id_fk
-            references auth_users
-            on update cascade on delete cascade,
-    ev_subscription_id serial
-        constraint workspaces_ev_subscriptions_id_fk
-            references ev_subscriptions
-            on update cascade on delete cascade,
-    name               varchar(60)                                                   not null,
-    constraint workspaces_pk
-        unique (owner_id, name)
+    owner_id           serial REFERENCES auth_users ON UPDATE CASCADE ON DELETE CASCADE,
+    ev_subscription_id serial REFERENCES ev_subscriptions ON UPDATE CASCADE ON DELETE CASCADE,
+    name               varchar(60) NOT NULL,
+    UNIQUE (owner_id, name)
 );
 
-alter table workspaces
-    owner to postgres;
+CREATE TABLE tasks_category (
+    id           serial PRIMARY KEY,
+    workspace_id serial REFERENCES workspaces ON UPDATE CASCADE ON DELETE CASCADE,
+    name         varchar(50) NOT NULL
+);
 
-create table tasks
-(
-    id                     serial
-        constraint tasks_pk
-            primary key,
-    workspace_id           serial
-        constraint tasks_workspaces_id_fk
-            references workspaces
-            on update cascade on delete cascade,
-    assigner_id            serial
-        constraint tasks_auth_user_id_fk
-            references auth_users
-            on update cascade on delete cascade,
-    worker_id              serial
-        constraint tasks_auth_user_id_fk_2
-            references auth_users
-            on update cascade on delete cascade,
+CREATE TABLE tasks (
+    id                     serial PRIMARY KEY,
+    workspace_id           serial REFERENCES workspaces ON UPDATE CASCADE ON DELETE CASCADE,
+    assigner_id            serial REFERENCES auth_users ON UPDATE CASCADE ON DELETE CASCADE,
+    worker_id              serial REFERENCES auth_users ON UPDATE CASCADE ON DELETE CASCADE,
     description            text,
     description_multimedia bytea,
-    assignment_date        timestamp default now() not null,
+    assignment_date        timestamp DEFAULT now() NOT NULL,
     due_date               timestamp,
-    status_id              serial
-    title                  varchar(50)             not null
-    constraint tasks_status_id_fk
-        references status
-        on update cascade on delete cascade
-
-    category_id            serial
-            constraint tasks_tasks_category_id_fk
-                references tasks_category
-                on update cascade on delete cascade
-    importance_id          serial
-            constraint tasks_importance_id_fk
-                references importance
-                on update cascade on delete cascade
+    status_id              serial REFERENCES status ON UPDATE CASCADE ON DELETE CASCADE,
+    title                  varchar(50) NOT NULL,
+    category_id            serial REFERENCES tasks_category ON UPDATE CASCADE ON DELETE CASCADE,
+    importance_id          serial REFERENCES importance ON UPDATE CASCADE ON DELETE CASCADE
 );
 
-alter table tasks
-    owner to postgres;
-
-create table tasks_category
-(
-    id           serial
-        constraint tasks_category_pk
-            primary key,
-    workspace_id serial
-        constraint tasks_category_workspaces_id_fk
-            references workspaces
-            on update cascade on delete cascade,
-    name         varchar(50) not null
-);
-
-alter table tasks_category
-    owner to postgres;
-
-create table problems
-(
-    id                 serial
-        constraint problems_pk
-            primary key,
-    worker_id          serial
-        constraint problems_auth_users_id_fk
-            references auth_users
-            on update cascade on delete cascade,
+CREATE TABLE problems (
+    id                 serial PRIMARY KEY,
+    worker_id          serial REFERENCES auth_users ON UPDATE CASCADE ON DELETE CASCADE,
     description        text,
-    mentor_id          serial
-        constraint problems_auth_users_id_fk_2
-            references auth_users
-            on update cascade on delete cascade,
+    mentor_id          serial REFERENCES auth_users ON UPDATE CASCADE ON DELETE CASCADE,
     problem_multimedia bytea
 );
 
-alter table problems
-    owner to postgres;
-
-create table worker_workspace_data
-(
+CREATE TABLE worker_workspace_data (
     employer_id   serial,
-    user_id       serial
-        constraint worker_workspace_data_pk
-            primary key
-        constraint worker_workspace_data_auth_users_id_fk
-            references auth_users
-            on update cascade on delete cascade,
-    working_since timestamp default now() not null
+    user_id       serial PRIMARY KEY REFERENCES auth_users ON UPDATE CASCADE ON DELETE CASCADE,
+    working_since timestamp DEFAULT now() NOT NULL
 );
 
-alter table worker_workspace_data
-    owner to postgres;
-
-create table positions
-(
-    id           serial
-        constraint positions_pk
-            primary key,
-    workspace_id serial
-        constraint positions_auth_users_id_fk
-            references auth_users
-            on update cascade on delete cascade,
+CREATE TABLE positions (
+    id           serial PRIMARY KEY,
+    workspace_id serial REFERENCES auth_users ON UPDATE CASCADE ON DELETE CASCADE,
     name         varchar(50)
 );
 
-alter table positions
-    owner to postgres;
-
-create table phone_dial_codes
-(
-    id      serial
-        constraint phone_dial_codes_pk
-            primary key,
-    code    varchar(6) not null,
-    country varchar(50)  not null
-);
-
-alter table phone_dial_codes
-    owner to postgres;
-
-create table countries
-(
-    id   serial
-        constraint countries_pk
-            primary key,
-    name varchar(50) not null
-);
-
-alter table countries
-    owner to postgres;
-
-create table full_users
-(
-    user_id              serial
-        constraint full_users_pk
-            primary key,
-    phone                varchar(10) not null,
-    phonde_dial_code_id  serial
-        constraint full_users_phone_dial_codes_id_fk
-            references phone_dial_codes
-            on update cascade on delete cascade,
-    countru_of_origin_id serial
-        constraint full_users_countries_id_fk
-            references countries
-            on update cascade on delete cascade,
+CREATE TABLE full_users (
+    user_id              serial PRIMARY KEY,
+    phone                varchar(10) NOT NULL,
+    phonde_dial_code_id  serial REFERENCES phone_dial_codes ON UPDATE CASCADE ON DELETE CASCADE,
+    countru_of_origin_id serial REFERENCES countries ON UPDATE CASCADE ON DELETE CASCADE,
     title                varchar(50),
     education            varchar(100),
-    birth_date           timestamp   not null,
+    birth_date           timestamp NOT NULL,
     account_bank_number  varchar(70),
     photo                bytea
 );
 
-alter table full_users
-    owner to postgres;
-
-create table workspace_users
-(
-    user_id             serial
-        constraint workspace_users_pk
-            primary key
-        constraint workspace_users___fk
-            references auth_users
-            on update cascade on delete cascade,
-    workspace_id        serial
-        constraint workspace_users_workspaces_id_fk
-            references workspaces
-            on update cascade on delete cascade,
+CREATE TABLE workspace_users (
+    user_id             serial PRIMARY KEY REFERENCES auth_users ON UPDATE CASCADE ON DELETE CASCADE,
+    workspace_id        serial REFERENCES workspaces ON UPDATE CASCADE ON DELETE CASCADE,
     plane_file_cut_name varchar(150),
-    workspace_role_id   serial
-        constraint workspace_users_workspace_roles_id_fk
-            references workspace_roles
-            on update cascade on delete cascade,
-    position_id         integer NULL
-        constraint workspace_users_positions_id_fk
-            references positions
-            on update cascade on delete cascade,
+    workspace_role_id   serial REFERENCES workspace_roles ON UPDATE CASCADE ON DELETE CASCADE,
+    position_id         integer NULL REFERENCES positions ON UPDATE CASCADE ON DELETE CASCADE,
     checkin_time        time,
     checkout_time       time
 );
 
-alter table workspace_users
-    owner to postgres;
-
-create table conversations
-(
-    id         serial
-        constraint conversations_pk
-            primary key,
-    name       varchar(70) not null,
-    created_at timestamp default now() not null
+CREATE TABLE conversations (
+    id         serial PRIMARY KEY,
+    name       varchar(70) NOT NULL,
+    created_at timestamp DEFAULT now() NOT NULL
 );
 
-alter table conversations
-    owner to postgres;
-
-create table messages
-(
-    id              serial
-        constraint messages_pk
-            primary key,
-    conversation_id serial
-        constraint messages_conversations_id_fk
-            references conversations
-            on update cascade on delete cascade,
-    sender_id       serial
-        constraint messages_auth_users_id_fk
-            references auth_users
-            on update cascade on delete cascade,
-    body            text                    not null,
-    read            boolean   default false not null,
-    created_at      timestamp default now() not null
+CREATE TABLE messages (
+    id              serial PRIMARY KEY,
+    conversation_id serial REFERENCES conversations ON UPDATE CASCADE ON DELETE CASCADE,
+    sender_id       serial REFERENCES auth_users ON UPDATE CASCADE ON DELETE CASCADE,
+    body            text NOT NULL,
+    read            boolean DEFAULT false NOT NULL,
+    created_at      timestamp DEFAULT now() NOT NULL
 );
 
-alter table messages
-    owner to postgres;
-
-create table conversation_participants
-(
-    conversation_id serial,
-    user_id         serial,
-    constraint conversation_participants_pk
-        primary key (user_id, conversation_id)
+CREATE TABLE conversation_participants (
+    conversation_id serial REFERENCES conversations ON UPDATE CASCADE ON DELETE CASCADE,
+    user_id         serial REFERENCES auth_users ON UPDATE CASCADE ON DELETE CASCADE,
+    PRIMARY KEY (user_id, conversation_id)
 );
 
-alter table conversation_participants
-    owner to postgres;
-
-create table users_citizenships
-(
-    user_id    serial
-        constraint users_citizenships_auth_users_id_fk
-            references auth_users
-            on update cascade on delete cascade,
-    country_id serial
-        constraint users_citizenships_countries_id_fk
-            references countries
-            on update cascade on delete cascade,
-    constraint users_citizenships_pk
-        primary key (country_id, user_id)
+CREATE TABLE users_citizenships (
+    user_id    serial REFERENCES auth_users ON UPDATE CASCADE ON DELETE CASCADE,
+    country_id serial REFERENCES countries ON UPDATE CASCADE ON DELETE CASCADE,
+    PRIMARY KEY (country_id, user_id)
 );
 
-alter table users_citizenships
-    owner to postgres;
-
-create table attendance
-(
-    id             serial
-        constraint attendance_pk
-            primary key,
-    user_id        serial
-        constraint attendance_auth_users_id_fk
-            references auth_users
-            on update cascade on delete cascade,
-    date           date not null,
-    checkin        time not null,
+CREATE TABLE attendance (
+    id             serial PRIMARY KEY,
+    user_id        serial REFERENCES auth_users ON UPDATE CASCADE ON DELETE CASCADE,
+    date           date NOT NULL,
+    checkin        time NOT NULL,
     checkin_photo  bytea,
     checkout       time,
     checkout_photo bytea,
-    workspace_id   serial
-        constraint attendance_workspaces_id_fk
-            references workspaces
-            on update cascade on delete cascade
+    workspace_id   serial REFERENCES workspaces ON UPDATE CASCADE ON DELETE CASCADE
 );
 
-
-create table workspace_invitations
-(
-    id           serial
-        constraint workspace_invitations_pk
-            primary key,
-    user_email   varchar                 not null
-        constraint workspace_invitations_auth_users_email_fk
-            references auth_users (email)
-            on update cascade on delete cascade,
-    token        varchar                 not null,
-    created_at   timestamp default now() not null,
-    expires_at   timestamp               not null,
+CREATE TABLE workspace_invitations (
+    id           serial PRIMARY KEY,
+    user_email   varchar NOT NULL REFERENCES auth_users(email) ON UPDATE CASCADE ON DELETE CASCADE,
+    token        varchar NOT NULL,
+    created_at   timestamp DEFAULT now() NOT NULL,
+    expires_at   timestamp NOT NULL,
     confirmed_at timestamp,
-    workspace_id serial not null
-        constraint workspace_invitations_workspaces_id_fk
-            references workspaces
-            on update cascade on delete cascade
+    workspace_id serial NOT NULL REFERENCES workspaces ON UPDATE CASCADE ON DELETE CASCADE
 );
 
-
-alter table attendance
-    owner to postgres;
+-- Set ownership for all tables
+ALTER TABLE roles OWNER TO postgres;
+ALTER TABLE auth_users OWNER TO postgres;
+ALTER TABLE confirmation_tokens OWNER TO postgres;
+ALTER TABLE password_reset_tokens OWNER TO postgres;
+ALTER TABLE importance OWNER TO postgres;
+ALTER TABLE status OWNER TO postgres;
+ALTER TABLE ev_subscriptions OWNER TO postgres;
+ALTER TABLE countries OWNER TO postgres;
+ALTER TABLE phone_dial_codes OWNER TO postgres;
+ALTER TABLE workspace_roles OWNER TO postgres;
+ALTER TABLE user_roles OWNER TO postgres;
+ALTER TABLE workspaces OWNER TO postgres;
+ALTER TABLE tasks_category OWNER TO postgres;
+ALTER TABLE tasks OWNER TO postgres;
+ALTER TABLE problems OWNER TO postgres;
+ALTER TABLE worker_workspace_data OWNER TO postgres;
+ALTER TABLE positions OWNER TO postgres;
+ALTER TABLE full_users OWNER TO postgres;
+ALTER TABLE workspace_users OWNER TO postgres;
+ALTER TABLE conversations OWNER TO postgres;
+ALTER TABLE messages OWNER TO postgres;
+ALTER TABLE conversation_participants OWNER TO postgres;
+ALTER TABLE users_citizenships OWNER TO postgres;
+ALTER TABLE attendance OWNER TO postgres;
+ALTER TABLE workspace_invitations OWNER TO postgres;

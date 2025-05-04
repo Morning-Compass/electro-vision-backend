@@ -1,10 +1,12 @@
 use crate::auth::find_user::Find;
 use crate::auth::find_user::FindData;
 use crate::constants::WORKSPACE_ROLES;
+use crate::models;
 use crate::models_insertable;
 use crate::models_insertable::NewWorkspace;
 use crate::response::Response as Res;
 use crate::schema::workspace_roles::dsl as workspace_roles_table;
+use crate::schema::workspace_users::dsl as workspace_users_table;
 use crate::schema::workspaces::dsl as workspaces_table;
 use actix_web::{post, web::Json, HttpResponse};
 use chrono::NaiveDateTime;
@@ -27,7 +29,6 @@ struct CreateWorkspaceRequest {
 
 #[post("/create_workspace")]
 pub async fn create_workspace(pool: DPool, req: Json<CreateWorkspaceRequest>) -> HttpResponse {
-    // Find user first to handle foreign key constraint
     let user =
         match <FindData as Find>::find_auth_user_by_email(req.owner_email.clone(), pool.clone())
             .await
@@ -47,14 +48,14 @@ pub async fn create_workspace(pool: DPool, req: Json<CreateWorkspaceRequest>) ->
             plan_file_name: req.plan_file_name.as_deref(),
             start_date: Utc::now().naive_utc(),
             finish_date: req.finish_date,
-            ev_subscription_id: 1, // You might want to validate this exists too
+            ev_subscription_id: 1,
             name: req.name.clone(),
         };
 
         // Insert workspace
-        diesel::insert_into(workspaces_table::workspaces)
+        let workspace = diesel::insert_into(workspaces_table::workspaces)
             .values(&new_workspace)
-            .execute(conn)?;
+            .get_result::<models::Workspace>(conn)?;
 
         // Add workspace role
         let workspace_role = models_insertable::WorkspaceRole {
@@ -64,6 +65,29 @@ pub async fn create_workspace(pool: DPool, req: Json<CreateWorkspaceRequest>) ->
 
         diesel::insert_into(workspace_roles_table::workspace_roles)
             .values(workspace_role)
+            .execute(conn)?;
+
+        let workspace_role = models_insertable::WorkspaceRole {
+            user_id: user.id,
+            name: WORKSPACE_ROLES[0].to_string(),
+        };
+
+        let inserted_role = diesel::insert_into(workspace_roles_table::workspace_roles)
+            .values(&workspace_role)
+            .get_result::<models::WorkspaceRole>(conn)?;
+
+        let user = models::WorkspaceUser {
+            user_id: user.id,
+            workspace_id: workspace.id,
+            workspace_role_id: inserted_role.id,
+            plane_file_cut_name: None,
+            position_id: None,
+            checkin_time: None,
+            checkout_time: None,
+        };
+
+        diesel::insert_into(workspace_users_table::workspace_users)
+            .values(&user)
             .execute(conn)?;
 
         Ok(())

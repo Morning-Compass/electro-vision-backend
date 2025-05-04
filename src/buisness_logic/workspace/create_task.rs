@@ -1,11 +1,7 @@
 use crate::auth::find_user::Find;
 use crate::auth::find_user::FindData;
-use crate::constants::TASK_CATEGORY;
 use crate::models_insertable;
 use crate::response::Response as Res;
-use crate::schema::importance as importance_data;
-use crate::schema::importance::dsl as importance_table;
-use crate::schema::tasks as tasks_data;
 use crate::schema::tasks::dsl as tasks_table;
 use crate::schema::tasks_category as tasks_category_data;
 use crate::schema::tasks_category::dsl as tasks_category_table;

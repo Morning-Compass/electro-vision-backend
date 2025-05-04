@@ -1,10 +1,6 @@
 use crate::est_conn;
 use crate::response::Response as Res;
-use crate::schema::importance::dsl as importance_table;
-use crate::schema::status::dsl as status_table;
-use crate::schema::tasks::dsl as tasks_table;
-use crate::schema::tasks_category::dsl as category_table;
-use crate::{schema::auth_users::dsl as users_table, DPool};
+use crate::DPool;
 use actix_web::{get, web::Path, HttpResponse};
 use chrono::NaiveDateTime;
 use diesel::prelude::*;

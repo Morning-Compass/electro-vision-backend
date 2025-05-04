@@ -84,6 +84,9 @@ async fn main() -> std::io::Result<()> {
             .service(buisness_logic::workspace::workspace_invitation::workspace_invitation)
             .service(buisness_logic::workspace::list_workspace_users::list_workspace_users)
             .service(buisness_logic::workspace::create_workspace::create_workspace)
+            .service(buisness_logic::workspace::create_task::create_task)
+            .service(buisness_logic::workspace::list_tasks::list_tasks)
+            .service(buisness_logic::workspace::list_workspaces::list_workspaces)
     })
     .bind(DOMAIN)?
     .run()
