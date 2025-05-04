@@ -48,13 +48,16 @@ CREATE TABLE ev_subscriptions (
 
 CREATE TABLE countries (
     id   serial PRIMARY KEY,
-    name varchar(50) NOT NULL
+    name varchar(50) NOT NULL,
+    iso3 varchar(3) NOT NULL,
+    numeric_code integer NOT NULL
 );
 
 CREATE TABLE phone_dial_codes (
-    id      serial PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     code    varchar(6) NOT NULL,
-    country varchar(50) NOT NULL
+    country_id serial REFERENCES countries ON UPDATE CASCADE ON DELETE CASCADE,
+    UNIQUE (code, country_id)
 );
 
 CREATE TABLE workspace_roles (
@@ -126,10 +129,10 @@ CREATE TABLE full_users (
     user_id              serial PRIMARY KEY,
     phone                varchar(10) NOT NULL,
     phonde_dial_code_id  serial REFERENCES phone_dial_codes ON UPDATE CASCADE ON DELETE CASCADE,
-    countru_of_origin_id serial REFERENCES countries ON UPDATE CASCADE ON DELETE CASCADE,
+    country_of_origin_id serial REFERENCES countries ON UPDATE CASCADE ON DELETE CASCADE,
     title                varchar(50),
     education            varchar(100),
-    birth_date           timestamp NOT NULL,
+    birth_date           date NOT NULL,
     account_bank_number  varchar(70),
     photo                bytea
 );
