@@ -1,3 +1,4 @@
+use crate::auth::find_user::{Find, FindData};
 use crate::response::Response as Res;
 use crate::schema::auth_users::dsl as auth_users_table;
 use crate::schema::positions as positions_data;
@@ -40,7 +41,7 @@ struct WorkspaceUserResponse {
     workspace_role: String,
 }
 
-#[post("/workspace/list/{id}/users")]
+#[post("/workspace/{id}/users/list")]
 pub async fn list_workspace_users(
     pool: DPool,
     req: Json<ListWorkspaceUsersRequest>,
@@ -49,12 +50,31 @@ pub async fn list_workspace_users(
     let workspace_id = path.id;
     let _email = req.email.clone();
 
-    let conn = &mut est_conn(pool);
+    let conn = &mut est_conn(pool.clone());
+
+    let workspaces =
+        match <FindData as Find>::find_workspace_by_owner_email(req.email.clone(), pool.clone())
+            .await
+        {
+            Ok(w) => w,
+            Err(_) => {
+                return HttpResponse::BadRequest()
+                    .json(Res::new("Workspace not found for owner's email or id"));
+            }
+        };
+
+    match workspaces.into_iter().find(|w| w.id == workspace_id) {
+        Some(_) => {}
+        None => {
+            return HttpResponse::BadRequest()
+                .json(Res::new("Workspace not found for owner's email or id"));
+        }
+    };
 
     match get_workspace_users(conn, workspace_id).await {
         Ok(users) => HttpResponse::Ok().json(Res::new(users)),
         Err(DieselError::NotFound) => {
-            HttpResponse::NotFound().json(Res::new("Workspace not found"))
+            HttpResponse::NotFound().json(Res::new("Workspace not found for that id"))
         }
         Err(err) => {
             eprintln!("Error listing workspace users: {}", err);
@@ -67,14 +87,6 @@ async fn get_workspace_users(
     conn: &mut DBPConn,
     workspace_id: i32,
 ) -> Result<Vec<WorkspaceUserResponse>, DieselError> {
-    let workspace_exists: bool = diesel::select(diesel::dsl::exists(
-        workspaces_table::workspaces.filter(workspaces_data::id.eq(workspace_id)),
-    ))
-    .get_result(conn)?;
-    if !workspace_exists {
-        return Err(DieselError::NotFound);
-    }
-
     let users = workspace_users_table::workspace_users
         .filter(workspace_users_data::workspace_id.eq(workspace_id))
         .inner_join(auth_users_table::auth_users)

@@ -1,5 +1,6 @@
 use crate::auth::find_user::Find;
 use crate::auth::find_user::FindData;
+use crate::models;
 use crate::models_insertable;
 use crate::response::Response as Res;
 use crate::schema::tasks::dsl as tasks_table;
@@ -38,8 +39,12 @@ enum Importance {
 }
 
 #[derive(Deserialize)]
+struct WorkspaceId {
+    id: i32,
+}
+
+#[derive(Deserialize)]
 struct CreateTaskRequest {
-    workspace_id: i32,
     assigner_email: String,
     assignee_email: String,
     description: Option<String>,
@@ -51,9 +56,14 @@ struct CreateTaskRequest {
     category: Option<String>,
 }
 
-#[post("/workspace/create/task")]
-pub async fn create_task(pool: DPool, req: Json<CreateTaskRequest>) -> HttpResponse {
+#[post("/workspace/{id}/tasks/create")]
+pub async fn create_task(
+    pool: DPool,
+    req: Json<CreateTaskRequest>,
+    id: actix_web::web::Path<WorkspaceId>,
+) -> HttpResponse {
     let conn = &mut est_conn(pool.clone());
+    let workspace_id = id.id;
 
     let assigner =
         match <FindData as Find>::find_auth_user_by_email(req.assigner_email.clone(), pool.clone())
@@ -71,20 +81,32 @@ pub async fn create_task(pool: DPool, req: Json<CreateTaskRequest>) -> HttpRespo
             Err(_) => return HttpResponse::BadRequest().json(Res::new("Assignee not found")),
         };
 
-    let result = conn.transaction::<_, DieselError, _>(|conn| {
-        let workspace_exists: bool = diesel::select(diesel::dsl::exists(
-            workspaces_table::workspaces.filter(workspaces_data::id.eq(req.workspace_id)),
-        ))
-        .get_result(conn)?;
-
-        if !workspace_exists {
-            return Err(DieselError::NotFound);
+    let workspaces = match <FindData as Find>::find_workspace_by_owner_email(
+        req.assigner_email.clone(),
+        pool.clone(),
+    )
+    .await
+    {
+        Ok(w) => w,
+        Err(_) => {
+            return HttpResponse::BadRequest()
+                .json(Res::new("Workspace not found for assigner's email"));
         }
+    };
 
+    match workspaces.into_iter().find(|w| w.id == workspace_id) {
+        Some(_) => {}
+        None => {
+            return HttpResponse::BadRequest()
+                .json(Res::new("Workspace not found for assigner's email"));
+        }
+    };
+
+    let result = conn.transaction::<_, DieselError, _>(|conn| {
         let category_id = match req.category.as_deref() {
             Some(category_name) => {
                 match tasks_category_table::tasks_category
-                    .filter(tasks_category_data::workspace_id.eq(req.workspace_id))
+                    .filter(tasks_category_data::workspace_id.eq(workspace_id))
                     .filter(tasks_category_data::name.eq(category_name))
                     .select(tasks_category_data::id)
                     .first::<i32>(conn)
@@ -92,7 +114,7 @@ pub async fn create_task(pool: DPool, req: Json<CreateTaskRequest>) -> HttpRespo
                     Ok(id) => id,
                     Err(_) => diesel::insert_into(tasks_category_table::tasks_category)
                         .values((
-                            tasks_category_data::workspace_id.eq(req.workspace_id),
+                            tasks_category_data::workspace_id.eq(workspace_id),
                             tasks_category_data::name.eq(category_name),
                         ))
                         .returning(tasks_category_data::id)
@@ -100,9 +122,8 @@ pub async fn create_task(pool: DPool, req: Json<CreateTaskRequest>) -> HttpRespo
                 }
             }
             None => {
-                // Try to find or create "NONE" category
                 match tasks_category_table::tasks_category
-                    .filter(tasks_category_data::workspace_id.eq(req.workspace_id))
+                    .filter(tasks_category_data::workspace_id.eq(workspace_id))
                     .filter(tasks_category_data::name.eq("NONE"))
                     .select(tasks_category_data::id)
                     .first::<i32>(conn)
@@ -110,7 +131,7 @@ pub async fn create_task(pool: DPool, req: Json<CreateTaskRequest>) -> HttpRespo
                     Ok(id) => id,
                     Err(_) => diesel::insert_into(tasks_category_table::tasks_category)
                         .values((
-                            tasks_category_data::workspace_id.eq(req.workspace_id),
+                            tasks_category_data::workspace_id.eq(workspace_id),
                             tasks_category_data::name.eq("NONE"),
                         ))
                         .returning(tasks_category_data::id)
@@ -134,7 +155,7 @@ pub async fn create_task(pool: DPool, req: Json<CreateTaskRequest>) -> HttpRespo
         });
 
         let new_task = models_insertable::Task {
-            workspace_id: req.workspace_id,
+            workspace_id,
             assigner_id: assigner.id,
             worker_id: assignee.id,
             description: req.description.clone(),
@@ -162,7 +183,8 @@ pub async fn create_task(pool: DPool, req: Json<CreateTaskRequest>) -> HttpRespo
         Err(DieselError::DatabaseError(DatabaseErrorKind::UniqueViolation, _)) => {
             HttpResponse::Conflict().json(Res::new("Task with this title already exists"))
         }
-        Err(DieselError::DatabaseError(DatabaseErrorKind::ForeignKeyViolation, _)) => {
+        Err(DieselError::DatabaseError(DatabaseErrorKind::ForeignKeyViolation, e)) => {
+            eprintln!("FK violation: {:?}", e);
             HttpResponse::BadRequest()
                 .json(Res::new("Invalid reference (workspace, user, or category)"))
         }

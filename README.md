@@ -37,6 +37,8 @@ INSERT into ev_subscriptions ( subscription) VALUES ('FREE'), ('PLUS'), ('PRO'),
 - COMPLETED
 - CANCELED
 
+INSERT into status (name) VALUES ('HELP_NEEDED'), ('TODO'), ('IN_PROGRESS'), ('COMPLETED'), ('CANCELED');
+
 INSERT into roles (name) VALUES ('USER'), ('ADMIN'), ('SUPPORT');
 
 ## importance

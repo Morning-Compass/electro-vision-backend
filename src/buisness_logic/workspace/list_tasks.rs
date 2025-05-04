@@ -1,12 +1,18 @@
-use crate::est_conn;
+use crate::auth::find_user::FindData;
 use crate::response::Response as Res;
 use crate::DPool;
-use actix_web::{get, web::Path, HttpResponse};
+use crate::{auth::find_user::Find, est_conn};
+use actix_web::post;
+use actix_web::{
+    get,
+    web::{Json, Path},
+    HttpResponse,
+};
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use diesel::result::Error;
 use diesel::result::Error as DieselError;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(QueryableByName, Serialize)]
 struct TaskResponse {
@@ -32,9 +38,45 @@ struct TaskResponse {
     created_at: NaiveDateTime,
 }
 
-#[get("/workspace/{workspace_id}/tasks")]
-pub async fn list_tasks(pool: DPool, path: Path<i32>) -> HttpResponse {
-    let workspace_id = path.into_inner();
+#[derive(Deserialize)]
+pub struct WorkspaceId {
+    id: i32,
+}
+
+#[derive(Deserialize)]
+pub struct ListTasksRequest {
+    owner_email: String,
+}
+
+#[post("/workspace/{id}/tasks/list")]
+pub async fn list_tasks(
+    pool: DPool,
+    path: Path<WorkspaceId>,
+    req: Json<ListTasksRequest>,
+) -> HttpResponse {
+    let workspace_id = path.id;
+
+    let workspaces = match <FindData as Find>::find_workspace_by_owner_email(
+        req.owner_email.clone(),
+        pool.clone(),
+    )
+    .await
+    {
+        Ok(w) => w,
+        Err(_) => {
+            return HttpResponse::BadRequest()
+                .json(Res::new("Workspace not found for owner's email or id"));
+        }
+    };
+
+    match workspaces.into_iter().find(|w| w.id == workspace_id) {
+        Some(_) => {}
+        None => {
+            return HttpResponse::BadRequest()
+                .json(Res::new("Workspace not found for owner's email or id"));
+        }
+    };
+
     let conn = &mut est_conn(pool);
 
     let result = conn.transaction::<_, Error, _>(|conn| {
