@@ -4,7 +4,6 @@ use crate::DPool;
 use crate::{auth::find_user::Find, est_conn};
 use actix_web::post;
 use actix_web::{
-    get,
     web::{Json, Path},
     HttpResponse,
 };

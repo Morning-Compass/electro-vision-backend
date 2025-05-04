@@ -7,8 +7,6 @@ use crate::schema::workspace_roles as workspace_roles_data;
 use crate::schema::workspace_roles::dsl as workspace_roles_table;
 use crate::schema::workspace_users as workspace_users_data;
 use crate::schema::workspace_users::dsl as workspace_users_table;
-use crate::schema::workspaces as workspaces_data;
-use crate::schema::workspaces::dsl as workspaces_table;
 use crate::{schema::auth_users as auth_users_data, DBPConn};
 
 use actix_web::{

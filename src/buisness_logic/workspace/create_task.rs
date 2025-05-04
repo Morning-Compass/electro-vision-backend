@@ -1,13 +1,10 @@
 use crate::auth::find_user::Find;
 use crate::auth::find_user::FindData;
-use crate::models;
 use crate::models_insertable;
 use crate::response::Response as Res;
 use crate::schema::tasks::dsl as tasks_table;
 use crate::schema::tasks_category as tasks_category_data;
 use crate::schema::tasks_category::dsl as tasks_category_table;
-use crate::schema::workspaces as workspaces_data;
-use crate::schema::workspaces::dsl as workspaces_table;
 
 use actix_web::{post, web::Json, HttpResponse};
 use chrono::NaiveDateTime;
