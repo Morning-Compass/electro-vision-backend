@@ -13,7 +13,7 @@ struct ResendVerificationEmailRequest {
     email: String,
 }
 
-#[post("/resend_verification_email")]
+#[post("/auth/resend/verification_email")]
 pub async fn resend_verification_email(
     request: Json<ResendVerificationEmailRequest>,
     pool: DPool,

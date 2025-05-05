@@ -9,7 +9,6 @@ mod response_handler;
 mod schema;
 mod user;
 
-use crate::auth::login::login::{login_email, login_username};
 use crate::constants::CONNECTION_POOL_ERROR;
 use actix_web::web::Data;
 use actix_web::{middleware, App, HttpServer};
@@ -73,8 +72,8 @@ async fn main() -> std::io::Result<()> {
             .wrap(cors)
             .service(user::list)
             .service(auth::register::register)
-            .service(login_email)
-            .service(login_username)
+            .service(auth::login::login_email)
+            .service(auth::login::login_username)
             .service(auth::validate_account::validate_account)
             .service(auth::resend_verification_email::resend_verification_email)
             .service(auth::reset_password::reset_password)

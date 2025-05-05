@@ -68,10 +68,8 @@ pub async fn list_user(
     Ok(UserWithRoles::new(usr, user_roles_result, token))
 }
 
-#[post("/login-username")]
+#[post("/auth/login/username")]
 pub async fn login_username(request: Json<RequestLoginUsername>, pool: DPool) -> HttpResponse {
-    
-
     let user_username = request.username.clone();
     let user = web::block(move || list_user(LoginMethodIdentifier::Username(user_username), pool))
         .await
@@ -103,7 +101,7 @@ pub async fn login_username(request: Json<RequestLoginUsername>, pool: DPool) ->
     }
 }
 
-#[post("/login-email")]
+#[post("/auth/login/email")]
 pub async fn login_email(request: Json<RequestLoginEmail>, pool: DPool) -> HttpResponse {
     let user_email = request.email.clone();
     let user = web::block(move || list_user(LoginMethodIdentifier::Email(user_email), pool))

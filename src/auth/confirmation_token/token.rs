@@ -1,7 +1,7 @@
 use std::env;
 
 use crate::auth::find_user::{Find, FindData};
-use crate::constants::{JWT_EXPIRATION_TIME, SMTP, WORKSPACE_INVITATION_EXPIRATION_TIME};
+use crate::constants::{DOMAIN, JWT_EXPIRATION_TIME, SMTP, WORKSPACE_INVITATION_EXPIRATION_TIME};
 use crate::models::WorkspaceUser;
 use crate::schema::auth_users as user_data;
 use crate::schema::auth_users::dsl as user_table;
@@ -395,19 +395,29 @@ impl ConfirmationToken for Cft {
 
         let email_body = match _email_type {
             TokenEmailType::AccountVerification => {
-                email_body_generator(EmailType::AccountVerification(_username.clone(), token))
+                email_body_generator(EmailType::AccountVerification(
+                    _username.clone(),
+                    format!("{}/auth/validate/account/{}", DOMAIN, token),
+                ))
             }
-            TokenEmailType::AccountVerificationResend => email_body_generator(
-                EmailType::AccountVerificationResend(_username.clone(), token),
-            ),
-            TokenEmailType::PasswordReset => {
-                email_body_generator(EmailType::ChangePassword(_username.clone(), token))
+            TokenEmailType::AccountVerificationResend => {
+                email_body_generator(EmailType::AccountVerificationResend(
+                    _username.clone(),
+                    format!("{}/auth/validate/account/{}", DOMAIN, token),
+                ))
             }
+            TokenEmailType::PasswordReset => email_body_generator(EmailType::ChangePassword(
+                _username.clone(),
+                format!("{}/auth/reset/password/{}", DOMAIN, token),
+            )),
             TokenEmailType::PasswordResetResend => {
                 todo!()
             }
             TokenEmailType::WorkspaceInvitation => {
-                email_body_generator(EmailType::WorkspaceInvitation(_username.clone(), token))
+                email_body_generator(EmailType::WorkspaceInvitation(
+                    _username.clone(),
+                    format!("{}/invitation/accept/workspace/{}", DOMAIN, token),
+                ))
             }
         };
 

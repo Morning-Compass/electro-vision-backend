@@ -14,7 +14,7 @@ pub struct Token {
     token: String,
 }
 
-#[put("/validate/{token}")]
+#[put("/auth/validate/account/{token}")]
 pub async fn validate_account(user_token: Path<Token>, pool: DPool) -> HttpResponse {
     println!("{}", user_token.token);
     match <Cft as ConfirmationToken>::confirm(

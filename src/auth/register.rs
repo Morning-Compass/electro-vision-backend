@@ -82,7 +82,7 @@ pub struct OkResponse {
     user: ResponseUser,
 }
 
-#[post("/register")]
+#[post("/auth/register")]
 pub async fn register(request: Json<RegisterRequest>, pool: DPool) -> HttpResponse {
     let new_user = User::new(
         request.username.clone(),

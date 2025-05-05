@@ -9,7 +9,7 @@ struct VerifyRequest {
     token: String,
 }
 
-#[post("/verify_session")]
+#[post("/auth/validate/session")]
 pub async fn verify_session(req: Json<VerifyRequest>, pool: DPool) -> HttpResponse {
     if !jwt::verify(&req.token, pool) {
         return HttpResponse::Unauthorized().json(Res::new("Token invalid"));

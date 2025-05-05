@@ -50,7 +50,7 @@ async fn change_password(email: String, password: String, pool: DPool) -> Result
     }
 }
 
-#[put("/reset_password/{token}")]
+#[put("/auth/reset/password/{token}")]
 pub async fn email_reset_password(
     pool: DPool,
     req: Json<EmailResetPasswordRequest>,
@@ -94,7 +94,7 @@ pub async fn email_reset_password(
     }
 }
 
-#[post("/reset_password")]
+#[post("/auth/reset/password")]
 pub async fn reset_password(pool: DPool, request: Json<ResetPasswordRequest>) -> HttpResponse {
     let pool_clone = pool.clone();
     let user: User = match <FindData as Find>::find_auth_user_by_email(
