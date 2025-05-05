@@ -49,8 +49,8 @@ CREATE TABLE ev_subscriptions (
 CREATE TABLE countries (
     id   serial PRIMARY KEY,
     name varchar(50) NOT NULL,
-    iso3 varchar(3) NOT NULL,
-    numeric_code integer NOT NULL
+    iso3 varchar(3),
+    numeric_code integer
 );
 
 CREATE TABLE phone_dial_codes (

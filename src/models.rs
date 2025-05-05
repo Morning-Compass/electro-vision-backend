@@ -153,8 +153,8 @@ pub struct FullUser {
 pub struct Country {
     pub id: i32,
     pub name: String,
-    pub iso3: String,
-    pub numeric_code: String,
+    pub iso3: Option<String>,
+    pub numeric_code: Option<String>,
 }
 
 #[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]

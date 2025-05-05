@@ -77,7 +77,7 @@ pub async fn register_full_user(req: Json<RegisterFullUserRequest>, pool: DPool)
 
     let country_id = if let Some(country) = &req.country_of_origin {
         match countries_table::countries
-            .filter(countries_data::iso3.eq(country))
+            .filter(countries_data::name.eq(country))
             .select(countries_data::id)
             .first::<i32>(conn)
             .optional()

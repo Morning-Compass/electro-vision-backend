@@ -54,8 +54,8 @@ diesel::table! {
         id -> Int4,
         #[max_length = 50]
         name -> Varchar,
-        iso3 -> Varchar,
-        numeric_code -> Varchar,
+        iso3 -> Nullable<Varchar>,
+        numeric_code -> Nullable<Varchar>,
     }
 }
 
