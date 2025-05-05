@@ -35,6 +35,8 @@ pub fn email_body_generator(email_type: EmailType) -> String {
                 <p class="text-muted">This link is valid for 15 minutes</p>
                 <p>If you didn't create this account, you can safely ignore this email.</p>
                 <p>Welcome aboard! We’re excited to have you with us.</p>
+                <p>If you can't click button copy and paste this link</p>
+                <p>{}</p>
                 <p>Best Regards,<br>Electro-Vision Team</p>
             </article>
         </section>
@@ -46,7 +48,7 @@ pub fn email_body_generator(email_type: EmailType) -> String {
 </body>
 </html>
             "#,
-            EMAIL_CSS_TEMPLATE, username, token
+            EMAIL_CSS_TEMPLATE, username, token, token
         ),
 
         EmailType::AccountVerificationResend(username, token) => format!(
@@ -73,6 +75,8 @@ pub fn email_body_generator(email_type: EmailType) -> String {
                 </p>
                 <p class="text-muted">This link is valid for 15 minutes.</p>
                 <p>If you didn’t request this email, please ignore it.</p>
+                <p>If you can't click button copy and paste this link</p>
+                <p>{}</p>
                 <p>Best Regards,<br>Electro-Vision Team</p>
             </article>
         </section>
@@ -84,7 +88,7 @@ pub fn email_body_generator(email_type: EmailType) -> String {
 </body>
 </html>
             "#,
-            EMAIL_CSS_TEMPLATE, username, token
+            EMAIL_CSS_TEMPLATE, username, token, token
         ),
 
         EmailType::ChangePassword(username, token) => format!(
@@ -110,6 +114,9 @@ pub fn email_body_generator(email_type: EmailType) -> String {
                     <a href="{}" class="action-button">Change password</a>
                 </p>
                 <p class="text-muted">Link expires in 15 minutes. Ignore if not requested.</p>
+
+                <p>If you can't click button copy and paste this link</p>
+                <p>{}</p>
                 <p>Need help? <a href="mailto:support@electro-vision.com">Contact support</a></p>
             </article>
         </section>
@@ -121,7 +128,7 @@ pub fn email_body_generator(email_type: EmailType) -> String {
 </body>
 </html>
             "#,
-            EMAIL_CSS_TEMPLATE, username, token
+            EMAIL_CSS_TEMPLATE, username, token, token
         ),
 
         EmailType::ChangePasswordResend(username, token) => format!(
@@ -148,6 +155,9 @@ pub fn email_body_generator(email_type: EmailType) -> String {
                 </p>
                 <p class="text-muted">This link will expire in 15 minutes.</p>
                 <p>If you didn't request this, please secure your account.</p>
+
+                <p>If you can't click button copy and paste this link</p>
+                <p>{}</p>
                 <p>Best Regards,<br>Electro-Vision Team</p>
             </article>
         </section>
@@ -159,7 +169,7 @@ pub fn email_body_generator(email_type: EmailType) -> String {
 </body>
 </html>
             "#,
-            EMAIL_CSS_TEMPLATE, username, token
+            EMAIL_CSS_TEMPLATE, username, token, token
         ),
         EmailType::WorkspaceInvitation(username, token) => format!(
             r#"
