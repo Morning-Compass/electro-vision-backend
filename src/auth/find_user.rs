@@ -16,7 +16,7 @@ pub trait Find {
     async fn find_workspace_by_owner_email(
         email: String,
         pool: DPool,
-    ) -> Result<Workspace, DieselError>;
+    ) -> Result<Vec<Workspace>, DieselError>;
     async fn find_full_user_by_email(email: String, pool: DPool) -> Result<FullUser, DieselError>;
     async fn find_auth_user_by_id(id: i32, pool: DPool) -> Result<User, DieselError>;
 }
@@ -39,16 +39,16 @@ impl Find for FindData {
     async fn find_workspace_by_owner_email(
         _email: String,
         pool: DPool,
-    ) -> Result<Workspace, DieselError> {
+    ) -> Result<Vec<Workspace>, DieselError> {
         let user = match self::FindData::find_auth_user_by_email(_email, pool.clone()).await {
             Ok(usr) => usr,
             Err(e) => return Err(e),
         };
         let conn = &mut est_conn(pool.clone());
-        let workspace = match workspaces_table::workspaces
+        let workspaces = match workspaces_table::workspaces
             .filter(workspaces_data::owner_id.eq(user.id))
             .select(models::Workspace::as_select())
-            .first(conn)
+            .get_results::<Workspace>(conn)
         {
             Ok(workspace) => workspace,
             Err(e) => {
@@ -57,7 +57,7 @@ impl Find for FindData {
             }
         };
 
-        Ok(workspace)
+        Ok(workspaces)
     }
 
     async fn exists_by_email(_email: String, pool: DPool) -> Result<bool, DieselError> {

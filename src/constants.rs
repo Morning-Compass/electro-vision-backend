@@ -12,6 +12,7 @@ pub const TEST_PASSWORD: &str = "qazxsw2.";
 pub const ROLES: [&str; 2] = ["USER", "ADMIN"];
 // oddac do create workspace ze wpisuje creator
 pub const WORKSPACE_ROLES: [&str; 4] = ["CREATOR", "ADMIN", "MANAGER", "WORKER"];
+pub const TASK_CATEGORY: [&str; 4] = ["NONE", "ELECTRICAL", "VERIFICATION", "OTHER"];
 pub const SMTP: &str = "smtp.gmail.com";
 pub const EMAIL_CSS_TEMPLATE: &str = r#"
     body, html {

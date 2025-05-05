@@ -1,28 +1,50 @@
--- First drop the workspace_invitations table that's causing the issue
-DROP TABLE IF EXISTS workspace_invitations;
+-- down.sql
+DROP TABLE IF EXISTS workspace_invitations CASCADE;
 
--- Then proceed with the rest in proper order
-DROP TABLE IF EXISTS attendance;
-DROP TABLE IF EXISTS users_citizenships;
-DROP TABLE IF EXISTS conversation_participants;
-DROP TABLE IF EXISTS messages;
-DROP TABLE IF EXISTS conversations;
-DROP TABLE IF EXISTS workspace_users;
-DROP TABLE IF EXISTS full_users;
-DROP TABLE IF EXISTS countries;
-DROP TABLE IF EXISTS phone_dial_codes;
-DROP TABLE IF EXISTS positions;
-DROP TABLE IF EXISTS worker_workspace_data;
-DROP TABLE IF EXISTS problems;
-DROP TABLE IF EXISTS tasks_category;
-DROP TABLE IF EXISTS tasks;
-DROP TABLE IF EXISTS workspaces;
-DROP TABLE IF EXISTS ev_subscriptions;
-DROP TABLE IF EXISTS workspace_roles;
-DROP TABLE IF EXISTS status;
-DROP TABLE IF EXISTS importance;
-DROP TABLE IF EXISTS user_roles;
-DROP TABLE IF EXISTS confirmation_tokens;
-DROP TABLE IF EXISTS password_reset_tokens;
-DROP TABLE IF EXISTS auth_users;
-DROP TABLE IF EXISTS roles;
+DROP TABLE IF EXISTS attendance CASCADE;
+
+DROP TABLE IF EXISTS users_citizenships CASCADE;
+
+DROP TABLE IF EXISTS conversation_participants CASCADE;
+
+DROP TABLE IF EXISTS messages CASCADE;
+
+DROP TABLE IF EXISTS conversations CASCADE;
+
+DROP TABLE IF EXISTS workspace_users CASCADE;
+
+DROP TABLE IF EXISTS full_users CASCADE;
+
+DROP TABLE IF EXISTS worker_workspace_data CASCADE;
+
+DROP TABLE IF EXISTS problems CASCADE;
+
+DROP TABLE IF EXISTS tasks CASCADE;
+
+DROP TABLE IF EXISTS tasks_category CASCADE;
+
+DROP TABLE IF EXISTS positions CASCADE;
+
+DROP TABLE IF EXISTS workspaces CASCADE;
+
+DROP TABLE IF EXISTS user_roles CASCADE;
+
+DROP TABLE IF EXISTS workspace_roles CASCADE;
+
+DROP TABLE IF EXISTS phone_dial_codes CASCADE;
+
+DROP TABLE IF EXISTS countries CASCADE;
+
+DROP TABLE IF EXISTS ev_subscriptions CASCADE;
+
+DROP TABLE IF EXISTS status CASCADE;
+
+DROP TABLE IF EXISTS importance CASCADE;
+
+DROP TABLE IF EXISTS password_reset_tokens CASCADE;
+
+DROP TABLE IF EXISTS confirmation_tokens CASCADE;
+
+DROP TABLE IF EXISTS auth_users CASCADE;
+
+DROP TABLE IF EXISTS roles CASCADE;

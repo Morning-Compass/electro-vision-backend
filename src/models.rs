@@ -88,12 +88,15 @@ pub struct Task {
     pub id: i32,
     pub workspace_id: i32,
     pub assigner_id: i32,
-    pub worker_id: i32,
+    pub worker_id: i32, // asignee
     pub description: Option<String>,
     pub description_multimedia: Option<Vec<u8>>,
     pub assignment_date: NaiveDateTime,
     pub due_date: Option<NaiveDateTime>,
     pub status_id: i32,
+    pub title: String,
+    pub category_id: i32,
+    pub importance_id: i32,
 }
 
 #[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]
@@ -136,10 +139,10 @@ pub struct FullUser {
     pub user_id: i32,
     pub phone: String,
     pub phonde_dial_code_id: i32,
-    pub countru_of_origin_id: i32,
+    pub country_of_origin_id: i32,
     pub title: Option<String>,
     pub education: Option<String>,
-    pub birth_date: NaiveDateTime,
+    pub birth_date: NaiveDate,
     pub account_bank_number: Option<String>,
     pub photo: Option<Vec<u8>>,
 }
@@ -150,6 +153,8 @@ pub struct FullUser {
 pub struct Country {
     pub id: i32,
     pub name: String,
+    pub iso3: Option<String>,
+    pub numeric_code: Option<String>,
 }
 
 #[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]
@@ -157,8 +162,8 @@ pub struct Country {
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct PhoneDialCode {
     pub id: i32,
+    pub country_id: i32,
     pub code: String,
-    pub country: String,
 }
 
 #[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]

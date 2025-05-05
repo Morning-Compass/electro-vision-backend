@@ -1,5 +1,2 @@
-pub mod add_user_to_workspace;
-pub mod create_workspace;
-pub mod list_workspace_users;
+pub mod full_user;
 pub mod workspace;
-pub mod workspace_invitation;

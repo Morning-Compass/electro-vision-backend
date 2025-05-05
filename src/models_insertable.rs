@@ -41,3 +41,19 @@ pub struct WorkspaceRole {
     pub user_id: i32,
     pub name: String,
 }
+
+#[derive(Insertable)]
+#[diesel(table_name = crate::schema::tasks)]
+pub struct Task {
+    pub workspace_id: i32,
+    pub assigner_id: i32,
+    pub worker_id: i32, // asignee
+    pub description: Option<String>,
+    pub description_multimedia: Option<Vec<u8>>,
+    pub assignment_date: NaiveDateTime,
+    pub due_date: Option<NaiveDateTime>,
+    pub status_id: i32,
+    pub title: String,
+    pub importance_id: i32,
+    pub category_id: i32,
+}

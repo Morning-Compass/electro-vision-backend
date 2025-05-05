@@ -54,6 +54,8 @@ diesel::table! {
         id -> Int4,
         #[max_length = 50]
         name -> Varchar,
+        iso3 -> Nullable<Varchar>,
+        numeric_code -> Nullable<Varchar>,
     }
 }
 
@@ -71,12 +73,12 @@ diesel::table! {
         #[max_length = 10]
         phone -> Varchar,
         phonde_dial_code_id -> Int4,
-        countru_of_origin_id -> Int4,
+        country_of_origin_id -> Int4,
         #[max_length = 50]
         title -> Nullable<Varchar>,
         #[max_length = 100]
         education -> Nullable<Varchar>,
-        birth_date -> Timestamp,
+        birth_date -> Date,
         #[max_length = 70]
         account_bank_number -> Nullable<Varchar>,
         photo -> Nullable<Bytea>,
@@ -116,10 +118,10 @@ diesel::table! {
 diesel::table! {
     phone_dial_codes (id) {
         id -> Int4,
+        #[max_length = 50]
+        country_id -> Int4,
         #[max_length = 6]
         code -> Varchar,
-        #[max_length = 50]
-        country -> Varchar,
     }
 }
 
@@ -168,6 +170,9 @@ diesel::table! {
         assignment_date -> Timestamp,
         due_date -> Nullable<Timestamp>,
         status_id -> Int4,
+        title -> Varchar,
+        category_id -> Int4,
+        importance_id -> Int4,
     }
 }
 
@@ -254,7 +259,7 @@ diesel::table! {
 
 diesel::joinable!(attendance -> auth_users (user_id));
 diesel::joinable!(attendance -> workspaces (workspace_id));
-diesel::joinable!(full_users -> countries (countru_of_origin_id));
+diesel::joinable!(full_users -> countries (country_of_origin_id));
 diesel::joinable!(full_users -> phone_dial_codes (phonde_dial_code_id));
 diesel::joinable!(messages -> auth_users (sender_id));
 diesel::joinable!(messages -> conversations (conversation_id));
