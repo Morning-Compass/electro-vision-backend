@@ -418,7 +418,7 @@ impl ConfirmationToken for Cft {
             TokenEmailType::WorkspaceInvitation => {
                 email_body_generator(EmailType::WorkspaceInvitation(
                     _username.clone(),
-                    format!("{}/invitation/accept/workspace/{}", FRONTEND_DOMAIN, token),
+                    format!("{}/invitation/{}", FRONTEND_DOMAIN, token),
                 ))
             }
         };

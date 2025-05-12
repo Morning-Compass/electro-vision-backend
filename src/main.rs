@@ -56,6 +56,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         let cors = actix_cors::Cors::default()
             .allowed_origin("http://localhost:3000")
+            .allowed_origin("http://localhost:3001")
             .allowed_methods(vec!["GET", "POST", "PUT", "DELETE", "OPTIONS"])
             .allowed_headers(vec![
                 actix_web::http::header::AUTHORIZATION,
