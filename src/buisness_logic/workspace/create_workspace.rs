@@ -90,12 +90,13 @@ pub async fn create_workspace(pool: DPool, req: Json<CreateWorkspaceRequest>) ->
             .values(&user)
             .execute(conn)?;
 
-        Ok(())
+        Ok(workspace)
     });
 
     match result {
-        Ok(_) => HttpResponse::Ok().json(Res::new("Workspace created successfully")),
+        Ok(w) => HttpResponse::Ok().json(Res::new(w)),
         Err(DieselError::DatabaseError(DatabaseErrorKind::UniqueViolation, e)) => {
+            eprintln!("{:?}", e);
             if e.message().contains("owner_id_plan_file_name") {
                 HttpResponse::Conflict()
                     .json(Res::new("Plan file name already exists for this owner"))

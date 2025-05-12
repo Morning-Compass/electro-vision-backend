@@ -80,8 +80,7 @@ CREATE TABLE workspaces (
     geolocation        varchar(40),
     owner_id           serial REFERENCES auth_users ON UPDATE CASCADE ON DELETE CASCADE,
     ev_subscription_id serial REFERENCES ev_subscriptions ON UPDATE CASCADE ON DELETE CASCADE,
-    name               varchar(60) NOT NULL,
-    UNIQUE (owner_id, name)
+    name               varchar(60) NOT NULL
 );
 
 CREATE TABLE tasks_category (
