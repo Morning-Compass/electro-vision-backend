@@ -137,7 +137,8 @@ CREATE TABLE full_users (
 );
 
 CREATE TABLE workspace_users (
-    user_id             serial PRIMARY KEY REFERENCES auth_users ON UPDATE CASCADE ON DELETE CASCADE,
+    id                  serial PRIMARY KEY,
+    user_id             serial REFERENCES auth_users ON UPDATE CASCADE ON DELETE CASCADE,
     workspace_id        serial REFERENCES workspaces ON UPDATE CASCADE ON DELETE CASCADE,
     plane_file_cut_name varchar(150),
     workspace_role_id   serial REFERENCES workspace_roles ON UPDATE CASCADE ON DELETE CASCADE,
