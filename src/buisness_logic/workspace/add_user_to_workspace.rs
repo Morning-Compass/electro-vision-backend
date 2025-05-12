@@ -1,6 +1,4 @@
-use crate::auth::auth_error::{
-    InvitationError, VerificationTokenError,
-};
+use crate::auth::auth_error::{InvitationError, VerificationTokenError};
 use crate::auth::confirmation_token::token::Cft;
 use crate::auth::confirmation_token::token::ConfirmationToken;
 use crate::auth::confirmation_token::token::TokenType;
@@ -29,7 +27,7 @@ struct Token {
     token: String,
 }
 
-#[put("/invitation/accept/{token}")]
+#[put("/workspace/invitation/accept/{token}")]
 pub async fn add_user_to_workspace(pool: DPool, req: actix_web::web::Path<Token>) -> HttpResponse {
     let workspace_invitation = match workspace_invitations_table::workspace_invitations
         .filter(workspace_invitations_data::token.eq(req.token.clone()))

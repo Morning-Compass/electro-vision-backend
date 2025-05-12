@@ -17,7 +17,7 @@ struct InviteToWorkspaceRequest {
     inviter_email: String,
 }
 
-#[post("/invitation/create")]
+#[post("/workspace/invitation/create")]
 pub async fn workspace_invitation(
     pool: DPool,
     req: Json<InviteToWorkspaceRequest>,

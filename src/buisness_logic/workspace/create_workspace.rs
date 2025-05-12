@@ -27,7 +27,7 @@ struct CreateWorkspaceRequest {
     geolocation: Option<String>,
 }
 
-#[post("/create_workspace")]
+#[post("/workspace/create")]
 pub async fn create_workspace(pool: DPool, req: Json<CreateWorkspaceRequest>) -> HttpResponse {
     let user =
         match <FindData as Find>::find_auth_user_by_email(req.owner_email.clone(), pool.clone())
@@ -95,8 +95,16 @@ pub async fn create_workspace(pool: DPool, req: Json<CreateWorkspaceRequest>) ->
 
     match result {
         Ok(_) => HttpResponse::Ok().json(Res::new("Workspace created successfully")),
-        Err(DieselError::DatabaseError(DatabaseErrorKind::UniqueViolation, _)) => {
-            HttpResponse::Conflict().json(Res::new("Workspace name already exists for this user"))
+        Err(DieselError::DatabaseError(DatabaseErrorKind::UniqueViolation, e)) => {
+            if e.message().contains("owner_id_plan_file_name") {
+                HttpResponse::Conflict()
+                    .json(Res::new("Plan file name already exists for this owner"))
+            } else if e.message().contains("owner_id_name") {
+                HttpResponse::Conflict()
+                    .json(Res::new("Workspace name already exists for this owner"))
+            } else {
+                HttpResponse::Conflict().json(Res::new("Unique constraint violation"))
+            }
         }
         Err(DieselError::DatabaseError(DatabaseErrorKind::ForeignKeyViolation, _)) => {
             HttpResponse::BadRequest().json(Res::new("Invalid user or subscription reference"))
