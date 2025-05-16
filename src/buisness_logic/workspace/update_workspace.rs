@@ -27,7 +27,6 @@ struct UpdateWorkspaceRequest {
     finish_date: Option<NaiveDateTime>,
     plan_file_name: Option<String>,
     geolocation: Option<String>,
-    ev_subscription_id: Option<i32>,
 }
 
 #[actix_web::put("/workspace/{workspace_id}")]
@@ -55,8 +54,6 @@ pub async fn update_workspace(
                 req.geolocation
                     .as_ref()
                     .map(|g| workspaces_table::geolocation.eq(g)),
-                req.ev_subscription_id
-                    .map(|e| workspaces_table::ev_subscription_id.eq(e)),
             ))
             .execute(conn)?;
 

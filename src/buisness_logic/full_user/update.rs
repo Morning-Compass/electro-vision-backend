@@ -16,7 +16,7 @@ use actix_web::{web::Json, HttpResponse};
 use chrono::NaiveDate;
 use diesel::result::Error as DieselError;
 use diesel::{Connection, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     auth::find_user::{Find, FindData},
@@ -73,14 +73,18 @@ pub async fn update_full_user(req: Json<UpdateFullUserRequest>, pool: DPool) -> 
         };
 
     let mut dial_code_id = None;
+    let mut dial_code_str = None;
     if let Some(code) = &req.phone_dial_code {
         match phone_dial_codes_table::phone_dial_codes
             .filter(phone_dial_codes_data::code.eq(code))
-            .select(phone_dial_codes_data::id)
-            .first::<i32>(conn)
+            .select((phone_dial_codes_data::id, phone_dial_codes_data::code))
+            .first::<(i32, String)>(conn)
             .optional()
         {
-            Ok(Some(id)) => dial_code_id = Some(id),
+            Ok(Some((id, code_str))) => {
+                dial_code_id = Some(id);
+                dial_code_str = Some(code_str);
+            }
             Ok(None) => {
                 return HttpResponse::BadRequest().json(Res::new("Invalid phone dial code"));
             }
@@ -93,14 +97,18 @@ pub async fn update_full_user(req: Json<UpdateFullUserRequest>, pool: DPool) -> 
     }
 
     let mut country_id = None;
+    let mut country_name = None;
     if let Some(country) = &req.country_of_origin {
         match countries_table::countries
             .filter(countries_data::name.eq(country))
-            .select(countries_data::id)
-            .first::<i32>(conn)
+            .select((countries_data::id, countries_data::name))
+            .first::<(i32, String)>(conn)
             .optional()
         {
-            Ok(Some(id)) => country_id = Some(id),
+            Ok(Some((id, name))) => {
+                country_id = Some(id);
+                country_name = Some(name);
+            }
             Ok(None) => {
                 return HttpResponse::BadRequest().json(Res::new("Invalid country of origin"));
             }
@@ -164,7 +172,88 @@ pub async fn update_full_user(req: Json<UpdateFullUserRequest>, pool: DPool) -> 
     });
 
     match result {
-        Ok(_) => HttpResponse::Ok().json(Res::new("User updated successfully")),
+        Ok(_) => {
+            // Fetch updated user data to return
+            let full_user = match full_users_table::full_users
+                .filter(full_users_data::user_id.eq(auth_user.id))
+                .first::<models::FullUser>(conn)
+            {
+                Ok(user) => user,
+                Err(e) => {
+                    eprintln!("Error fetching updated user: {:?}", e);
+                    return HttpResponse::InternalServerError()
+                        .json(Res::new("User updated but failed to fetch updated data"));
+                }
+            };
+
+            // Get phone dial code
+            let phone_dial_code = match dial_code_str {
+                Some(code) => code,
+                None => match phone_dial_codes_table::phone_dial_codes
+                    .find(full_user.phonde_dial_code_id)
+                    .select(phone_dial_codes_data::code)
+                    .first::<String>(conn)
+                {
+                    Ok(code) => code,
+                    Err(e) => {
+                        eprintln!("Error fetching phone dial code: {:?}", e);
+                        return HttpResponse::InternalServerError()
+                            .json(Res::new("Failed to fetch phone dial code"));
+                    }
+                },
+            };
+
+            // Get country of origin
+            let country_of_origin = match country_name {
+                Some(name) => name,
+                None => match countries_table::countries
+                    .find(full_user.country_of_origin_id)
+                    .select(countries_data::name)
+                    .first::<String>(conn)
+                {
+                    Ok(name) => name,
+                    Err(e) => {
+                        eprintln!("Error fetching country: {:?}", e);
+                        return HttpResponse::InternalServerError()
+                            .json(Res::new("Failed to fetch country"));
+                    }
+                },
+            };
+
+            // Get citizenships
+            let citizenships = match users_citizenships_table::users_citizenships
+                .filter(users_citizenships_data::user_id.eq(auth_user.id))
+                .inner_join(countries_table::countries)
+                .select(countries_data::name)
+                .load::<String>(conn)
+            {
+                Ok(citizenships) => citizenships,
+                Err(e) => {
+                    eprintln!("Error fetching citizenships: {:?}", e);
+                    return HttpResponse::InternalServerError()
+                        .json(Res::new("Failed to fetch citizenships"));
+                }
+            };
+
+            // Construct response
+            let response = FullUserResponse {
+                id: auth_user.id,
+                username: auth_user.username,
+                created_at: auth_user.created_at,
+                account_valid: auth_user.account_valid,
+                phone: full_user.phone,
+                phone_dial_code,
+                country_of_origin,
+                title: full_user.title,
+                education: full_user.education,
+                birth_date: full_user.birth_date,
+                account_bank_number: full_user.account_bank_number,
+                photo: full_user.photo,
+                citizenships,
+            };
+
+            HttpResponse::Ok().json(Res::new(response))
+        }
         Err(err) => {
             eprintln!("DB error updating user: {:?}", err);
             HttpResponse::InternalServerError().json(Res::new("Failed to update user"))
