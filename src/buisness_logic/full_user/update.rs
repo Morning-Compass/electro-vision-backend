@@ -11,8 +11,8 @@ use crate::schema::users_citizenships as users_citizenships_data;
 use crate::schema::users_citizenships::dsl as users_citizenships_table;
 
 use crate::{est_conn, response::Response as Res};
-use actix_web::{web::Json, HttpResponse};
 use actix_web::put;
+use actix_web::{web::Json, HttpResponse};
 use chrono::NaiveDate;
 use diesel::result::Error as DieselError;
 use diesel::{Connection, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
@@ -35,6 +35,22 @@ struct UpdateFullUserRequest {
     photo: Option<Vec<u8>>,
     citizenships_countries_iso3: Option<Vec<String>>,
     email: String,
+}
+#[derive(Serialize)]
+struct FullUserResponse {
+    id: i32,
+    username: String,
+    created_at: chrono::NaiveDateTime,
+    account_valid: bool,
+    phone: String,
+    phone_dial_code: String,
+    country_of_origin: String,
+    title: Option<String>,
+    education: Option<String>,
+    birth_date: chrono::NaiveDate,
+    account_bank_number: Option<String>,
+    photo: Option<Vec<u8>>,
+    citizenships: Vec<String>,
 }
 
 #[put("/user/update")]
