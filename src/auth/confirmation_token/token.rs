@@ -2,7 +2,7 @@ use std::env;
 
 use crate::auth::find_user::{Find, FindData};
 use crate::constants::{
-    DOMAIN, FRONTEND_DOMAIN, JWT_EXPIRATION_TIME, SMTP, WORKSPACE_INVITATION_EXPIRATION_TIME,
+    FRONTEND_DOMAIN, JWT_EXPIRATION_TIME, SMTP, WORKSPACE_INVITATION_EXPIRATION_TIME,
 };
 use crate::models::WorkspaceUser;
 use crate::schema::auth_users as user_data;

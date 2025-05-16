@@ -11,8 +11,8 @@ use crate::schema::users_citizenships as users_citizenships_data;
 use crate::schema::users_citizenships::dsl as users_citizenships_table;
 
 use crate::{est_conn, response::Response as Res};
-use actix_web::{post, web::Json, HttpResponse};
-use actix_web::{put, web};
+use actix_web::{web::Json, HttpResponse};
+use actix_web::put;
 use chrono::NaiveDate;
 use diesel::result::Error as DieselError;
 use diesel::{Connection, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};

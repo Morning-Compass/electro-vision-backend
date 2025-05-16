@@ -1,10 +1,8 @@
 use crate::schema::countries as countries_data;
 use crate::schema::countries::dsl as countries_table;
-use crate::schema::full_users as full_users_data;
 use crate::schema::full_users::dsl as full_users_table;
 use crate::schema::phone_dial_codes as phone_dial_codes_data;
 use crate::schema::phone_dial_codes::dsl as phone_dial_codes_table;
-use crate::schema::users_citizenships as users_citizenships_data;
 use crate::schema::users_citizenships::dsl as users_citizenships_table;
 
 use crate::{est_conn, response::Response as Res};

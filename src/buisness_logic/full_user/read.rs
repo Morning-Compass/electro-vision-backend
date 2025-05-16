@@ -13,7 +13,7 @@ use crate::schema::users_citizenships as users_citizenships_data;
 use crate::{est_conn, response::Response as Res};
 use crate::{models, DPool};
 use actix_web::post;
-use actix_web::{get, web::Json, HttpResponse};
+use actix_web::{web::Json, HttpResponse};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl, SelectableHelper};
 use serde::{Deserialize, Serialize};
 
