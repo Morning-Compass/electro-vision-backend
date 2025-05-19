@@ -1,5 +1,9 @@
+use std::io;
+
 use crate::auth::find_user::FindData;
+use crate::multimedia_handler::MultimediaHandler;
 use crate::response::Response as Res;
+use crate::schema::importance;
 use crate::DPool;
 use crate::{auth::find_user::Find, est_conn};
 use actix_web::post;
@@ -7,33 +11,42 @@ use actix_web::{
     web::{Json, Path},
     HttpResponse,
 };
+use base64::{engine::general_purpose, Engine as _};
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use diesel::result::Error;
 use diesel::result::Error as DieselError;
+use mime_guess::MimeGuess;
 use serde::{Deserialize, Serialize};
 
 #[derive(QueryableByName, Serialize)]
-struct TaskResponse {
-    #[diesel(sql_type = diesel::sql_types::Integer)]
+struct DbTask {
     id: i32,
-    #[diesel(sql_type = diesel::sql_types::Text)]
     title: String,
-    #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Text>)]
     description: Option<String>,
-    #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Timestamp>)]
+    description_multimedia_path: Option<String>,
     due_date: Option<NaiveDateTime>,
-    #[diesel(sql_type = diesel::sql_types::Text)]
     status: String,
-    #[diesel(sql_type = diesel::sql_types::Text)]
     importance: String,
-    #[diesel(sql_type = diesel::sql_types::Text)]
     assigner_username: String,
-    #[diesel(sql_type = diesel::sql_types::Text)]
     assignee_username: String,
-    #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Text>)]
     category: Option<String>,
-    #[diesel(sql_type = diesel::sql_types::Timestamp)]
+    created_at: NaiveDateTime,
+}
+
+#[derive(Serialize)]
+struct TaskResponse {
+    id: i32,
+    title: String,
+    description: Option<String>,
+    description_multimedia: Option<String>,
+    description_multimedia_filename: Option<String>,
+    due_date: Option<NaiveDateTime>,
+    status: String,
+    importance: String,
+    assigner_username: String,
+    assignee_username: String,
+    category: Option<String>,
     created_at: NaiveDateTime,
 }
 
@@ -90,7 +103,8 @@ pub async fn list_tasks(
                 assigner.username as assigner_username,
                 assignee.username as assignee_username,
                 tasks_category.name as category,
-                tasks.assignment_date as created_at
+                tasks.assignment_date as created_at,
+                tasks.description_multimedia_path
             FROM tasks
             JOIN status ON tasks.status_id = status.id
             JOIN importance ON tasks.importance_id = importance.id
@@ -103,11 +117,59 @@ pub async fn list_tasks(
 
         diesel::sql_query(query)
             .bind::<diesel::sql_types::Integer, _>(workspace_id)
-            .load::<TaskResponse>(conn)
+            .load::<DbTask>(conn)
     });
 
     match result {
-        Ok(tasks) => HttpResponse::Ok().json(tasks),
+        Ok(tasks) => {
+            let mut res: Vec<TaskResponse> = Vec::new();
+
+            for task in tasks {
+                let (multimedia, filename) = match task.description_multimedia_path {
+                    Some(ref path) => match MultimediaHandler::get_file_content_base64(path) {
+                        Ok(content) => {
+                            let filename = std::path::Path::new(path)
+                                .file_name()
+                                .and_then(|f| f.to_str())
+                                .map(|s| s.to_string());
+
+                            (Some(content), filename)
+                        }
+                        Err(e) => {
+                            return match e.kind() {
+                                io::ErrorKind::NotFound => {
+                                    HttpResponse::NotFound().json(Res::new("File not found."))
+                                }
+                                io::ErrorKind::PermissionDenied => HttpResponse::Forbidden()
+                                    .json(Res::new("Permission denied while accessing file.")),
+                                _ => HttpResponse::InternalServerError()
+                                    .json(Res::new("Failed to read multimedia file.")),
+                            };
+                        }
+                    },
+                    None => (None, None),
+                };
+
+                let task_res = TaskResponse {
+                    id: task.id,
+                    title: task.title,
+                    description: task.description,
+                    description_multimedia: multimedia,
+                    description_multimedia_filename: filename,
+                    due_date: task.due_date,
+                    status: task.status,
+                    importance: task.importance,
+                    assigner_username: task.assigner_username,
+                    assignee_username: task.assignee_username,
+                    category: task.category,
+                    created_at: task.created_at,
+                };
+
+                res.push(task_res);
+            }
+
+            HttpResponse::Ok().json(res)
+        }
         Err(DieselError::NotFound) => HttpResponse::NotFound().json(Res::new("No tasks found")),
         Err(err) => {
             eprintln!("Error listing tasks: {}", err);

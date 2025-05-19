@@ -95,7 +95,7 @@ CREATE TABLE tasks (
     assigner_id            serial REFERENCES auth_users ON UPDATE CASCADE ON DELETE CASCADE,
     worker_id              serial REFERENCES auth_users ON UPDATE CASCADE ON DELETE CASCADE,
     description            text,
-    description_multimedia bytea,
+    description_multimedia_path varchar(50),
     assignment_date        timestamp DEFAULT now() NOT NULL,
     due_date               timestamp,
     status_id              serial REFERENCES status ON UPDATE CASCADE ON DELETE CASCADE,
@@ -109,7 +109,7 @@ CREATE TABLE problems (
     worker_id          serial REFERENCES auth_users ON UPDATE CASCADE ON DELETE CASCADE,
     description        text,
     mentor_id          serial REFERENCES auth_users ON UPDATE CASCADE ON DELETE CASCADE,
-    problem_multimedia bytea
+    problem_multimedia_path varchar(50)
 );
 
 CREATE TABLE worker_workspace_data (

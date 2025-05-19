@@ -90,7 +90,7 @@ pub struct Task {
     pub assigner_id: i32,
     pub worker_id: i32, // asignee
     pub description: Option<String>,
-    pub description_multimedia: Option<Vec<u8>>,
+    pub description_multimedia_path: Option<String>,
     pub assignment_date: NaiveDateTime,
     pub due_date: Option<NaiveDateTime>,
     pub status_id: i32,
@@ -174,7 +174,7 @@ pub struct Problem {
     pub worker_id: i32,
     pub description: Option<String>,
     pub mentor_id: i32,
-    pub problem_multimedia: Option<Vec<u8>>,
+    pub problem_multimedia_path: Option<String>,
 }
 
 #[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]

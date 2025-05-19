@@ -20,6 +20,9 @@ jsonwebtoken = "9"
 lettre = "0.10"
 lettre_email="0.9"
 actix-cors = "0.7.1"
+mime_guess = "2.0"
+infer = "0.13"
+base64 = "0.21"
 
 [dependencies.uuid]
 version = "1.9.1"

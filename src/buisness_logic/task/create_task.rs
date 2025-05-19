@@ -1,7 +1,9 @@
+use super::status_importance::{Importance, Status};
 use crate::auth::find_user::Find;
 use crate::auth::find_user::FindData;
 use crate::models_insertable;
 use crate::response::Response as Res;
+use crate::schema::tasks::assigner_id;
 use crate::schema::tasks::dsl as tasks_table;
 use crate::schema::tasks_category as tasks_category_data;
 use crate::schema::tasks_category::dsl as tasks_category_table;
@@ -15,25 +17,9 @@ use diesel::QueryDsl;
 use diesel::{Connection, ExpressionMethods, RunQueryDsl};
 use serde::Deserialize;
 
+use crate::constants::MAX_MULTIMEDIA_SIZE;
+use crate::multimedia_handler::{MultimediaHandler, MultimediaHandlerError};
 use crate::{est_conn, DPool};
-
-#[derive(Deserialize)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-enum Status {
-    HelpNeeded,
-    Todo,
-    InProgress,
-    Completed,
-    Canceled,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-enum Importance {
-    Low,
-    Medium,
-    High,
-}
 
 #[derive(Deserialize)]
 struct WorkspaceId {
@@ -45,7 +31,7 @@ struct CreateTaskRequest {
     assigner_email: String,
     assignee_email: String,
     description: Option<String>,
-    description_multimedia: Option<Vec<u8>>,
+    description_multimedia: Option<String>,
     due_date: Option<NaiveDateTime>,
     status: Option<Status>,
     title: String,
@@ -99,6 +85,38 @@ pub async fn create_task(
         }
     };
 
+    let multimedia_path = if let Some(multimedia_data) = &req.description_multimedia {
+        if multimedia_data.is_empty() {
+            None
+        } else {
+            let mut handler = MultimediaHandler::new(multimedia_data.clone(), assigner.id);
+            match handler.decode_and_store() {
+                Ok(_) => handler.get_file_path(),
+                Err(MultimediaHandlerError::MaximumFileSizeReached) => {
+                    return HttpResponse::PayloadTooLarge().json(Res::new(format!(
+                        "Multimedia file exceeds the size limit ({} MB).",
+                        MAX_MULTIMEDIA_SIZE
+                    )));
+                }
+                Err(MultimediaHandlerError::DecodingError) => {
+                    return HttpResponse::InternalServerError()
+                        .json(Res::new("Failed to decode multimedia data."));
+                }
+                Err(MultimediaHandlerError::FileSystemError) => {
+                    return HttpResponse::InternalServerError().json(Res::new(
+                        "A file system error occurred while saving the file.",
+                    ));
+                }
+                Err(MultimediaHandlerError::InvalidFileType) => {
+                    return HttpResponse::UnsupportedMediaType()
+                        .json(Res::new("Unsupported multimedia file type."));
+                }
+            }
+        }
+    } else {
+        None
+    };
+
     let result = conn.transaction::<_, DieselError, _>(|conn| {
         let category_id = match req.category.as_deref() {
             Some(category_name) => {
@@ -138,7 +156,6 @@ pub async fn create_task(
         };
 
         let status_id = req.status.as_ref().map_or(2, |s| match s {
-            Status::HelpNeeded => 1,
             Status::Todo => 2,
             Status::InProgress => 3,
             Status::Completed => 4,
@@ -156,7 +173,7 @@ pub async fn create_task(
             assigner_id: assigner.id,
             worker_id: assignee.id,
             description: req.description.clone(),
-            description_multimedia: req.description_multimedia.clone(),
+            description_multimedia_path: multimedia_path,
             assignment_date: Utc::now().naive_utc(),
             due_date: req.due_date,
             status_id,

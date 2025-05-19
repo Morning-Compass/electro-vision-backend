@@ -140,7 +140,7 @@ diesel::table! {
         worker_id -> Int4,
         description -> Nullable<Text>,
         mentor_id -> Int4,
-        problem_multimedia -> Nullable<Bytea>,
+        problem_multimedia_path -> Nullable<Varchar>,
     }
 }
 
@@ -166,7 +166,7 @@ diesel::table! {
         assigner_id -> Int4,
         worker_id -> Int4,
         description -> Nullable<Text>,
-        description_multimedia -> Nullable<Bytea>,
+        description_multimedia_path -> Nullable<Varchar>,
         assignment_date -> Timestamp,
         due_date -> Nullable<Timestamp>,
         status_id -> Int4,

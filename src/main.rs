@@ -4,6 +4,7 @@ mod constants;
 mod emails;
 mod models;
 mod models_insertable;
+mod multimedia_handler;
 mod response;
 mod response_handler;
 mod schema;
