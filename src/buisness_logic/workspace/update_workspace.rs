@@ -1,3 +1,4 @@
+use crate::auth::find_user::{Find, FindData};
 use crate::models;
 use crate::response::Response as Res;
 use crate::schema::workspaces as workspaces_data;
@@ -27,15 +28,23 @@ pub async fn update_workspace(
     workspace_id: actix_web::web::Path<i32>,
     req: Json<UpdateWorkspaceRequest>,
 ) -> HttpResponse {
-    let conn = &mut est_conn(pool);
+    let conn = &mut est_conn(pool.clone());
+
+    let workspace = match <FindData as Find>::find_workspace_by_id(*workspace_id, pool).await {
+        Ok(w) => w,
+        Err(e) => match e {
+            DieselError::NotFound => {
+                return HttpResponse::NotFound().json(Res::new("Workspace not found"))
+            }
+            _ => {
+                return HttpResponse::InternalServerError().json(Res::new(
+                    "Internal server error while searching for workspace",
+                ))
+            }
+        },
+    };
 
     let result = conn.transaction::<_, DieselError, _>(|conn| {
-        // First verify workspace exists
-        let existing_workspace = workspaces_table::workspaces
-            .filter(workspaces_data::id.eq(*workspace_id))
-            .first::<models::Workspace>(conn)?;
-
-        // Update workspace
         diesel::update(workspaces_table::workspaces.filter(workspaces_data::id.eq(*workspace_id)))
             .set((
                 req.name.as_ref().map(|n| workspaces_table::name.eq(n)),
@@ -49,11 +58,11 @@ pub async fn update_workspace(
             ))
             .execute(conn)?;
 
-        Ok(existing_workspace)
+        Ok(())
     });
 
     match result {
-        Ok(workspace) => HttpResponse::Ok().json(Res::new(workspace)),
+        Ok(_) => HttpResponse::Ok().json(Res::new("Workspace updated successfully")),
         Err(DieselError::NotFound) => {
             HttpResponse::NotFound().json(Res::new("Workspace not found"))
         }

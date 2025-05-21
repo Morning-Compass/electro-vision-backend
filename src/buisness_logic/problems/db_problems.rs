@@ -1,4 +1,3 @@
-use chrono::NaiveDateTime;
 use diesel::prelude::QueryableByName;
 use serde::Serialize;
 

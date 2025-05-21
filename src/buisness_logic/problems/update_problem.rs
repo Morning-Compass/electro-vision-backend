@@ -6,9 +6,8 @@ use crate::response::Response as Res;
 use crate::schema::problems as problems_data; // Import for AsChangeset
 use crate::schema::problems::dsl as problems_table; // Import problems dsl
 use actix_web::{web::Json, HttpResponse};
-use chrono::NaiveDateTime;
 use diesel::prelude::*;
-use diesel::result::{DatabaseErrorKind, Error as DieselError};
+use diesel::result::Error as DieselError;
 use serde::Deserialize;
 
 use crate::{est_conn, DPool};

@@ -2,18 +2,14 @@ use crate::auth::find_user::Find;
 use crate::auth::find_user::FindData;
 use crate::models_insertable;
 use crate::response::Response as Res;
-use crate::schema::problems as problems_data;
 use crate::schema::problems::dsl as problems_table; // Import problems dsl
-use crate::schema::tasks_category as tasks_category_data;
-use crate::schema::tasks_category::dsl as tasks_category_table; // Import for AsChangeset
+ // Import for AsChangeset
 
 use actix_web::{post, web::Json, HttpResponse};
-use chrono::NaiveDateTime;
-use chrono::Utc;
 use diesel::result::DatabaseErrorKind;
 use diesel::result::Error as DieselError;
 use diesel::QueryDsl;
-use diesel::{Connection, ExpressionMethods, RunQueryDsl};
+use diesel::{Connection, RunQueryDsl};
 use serde::Deserialize;
 
 use crate::constants::MAX_MULTIMEDIA_SIZE;
