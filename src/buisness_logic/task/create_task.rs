@@ -90,7 +90,7 @@ pub async fn create_task(
         } else {
             let mut handler = MultimediaHandler::new(multimedia_data.clone(), workspace_id);
             match handler.decode_and_store() {
-                Ok(_) => handler.get_file_path(),
+                Ok(path_buf) => Some(path_buf.to_string_lossy().into_owned()),
                 Err(MultimediaHandlerError::MaximumFileSizeReached) => {
                     return HttpResponse::PayloadTooLarge().json(Res::new(format!(
                         "Multimedia file exceeds the size limit ({} MB).",

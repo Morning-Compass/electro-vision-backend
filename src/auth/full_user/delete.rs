@@ -1,3 +1,5 @@
+use crate::schema::auth_users as auth_users_data;
+use crate::schema::auth_users::dsl as auth_users_table;
 use crate::schema::full_users as full_users_data;
 use crate::schema::full_users::dsl as full_users_table;
 use crate::schema::users_citizenships as users_citizenships_data;
@@ -9,10 +11,7 @@ use diesel::result::Error as DieselError;
 use diesel::{Connection, ExpressionMethods, QueryDsl, RunQueryDsl};
 
 use crate::DPool;
-// after 13 may
-//
-//
-//
+
 #[actix_web::delete("/user/delete/{user_id}")]
 pub async fn delete_full_user(user_id: actix_web::web::Path<i32>, pool: DPool) -> HttpResponse {
     let conn = &mut est_conn(pool);
@@ -25,6 +24,9 @@ pub async fn delete_full_user(user_id: actix_web::web::Path<i32>, pool: DPool) -
         .execute(c)?;
 
         diesel::delete(full_users_table::full_users.filter(full_users_data::user_id.eq(*user_id)))
+            .execute(c)?;
+
+        diesel::delete(auth_users_table::auth_users.filter(auth_users_data::id.eq(*user_id)))
             .execute(c)?;
 
         Ok(())

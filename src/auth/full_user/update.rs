@@ -32,7 +32,7 @@ struct UpdateFullUserRequest {
     education: Option<String>,
     birth_date: Option<NaiveDate>,
     account_bank_number: Option<String>,
-    photo: Option<Vec<u8>>,
+    photo: Option<String>,
     citizenships_countries_iso3: Option<Vec<String>>,
     email: String,
 }
@@ -49,7 +49,7 @@ struct FullUserResponse {
     education: Option<String>,
     birth_date: chrono::NaiveDate,
     account_bank_number: Option<String>,
-    photo: Option<Vec<u8>>,
+    photo: Option<String>,
     citizenships: Vec<String>,
 }
 

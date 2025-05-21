@@ -144,7 +144,7 @@ pub struct FullUser {
     pub education: Option<String>,
     pub birth_date: NaiveDate,
     pub account_bank_number: Option<String>,
-    pub photo: Option<Vec<u8>>,
+    pub photo: Option<String>,
 }
 
 #[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]

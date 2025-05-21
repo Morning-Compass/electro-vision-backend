@@ -8,7 +8,7 @@ pub struct DbProblem {
     #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Text>)]
     pub description: Option<String>,
     #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Text>)]
-    pub description_multimedia_path: Option<String>,
+    pub problem_multimedia_path: Option<String>,
     #[diesel(sql_type = diesel::sql_types::Text)]
     pub worker_username: String,
     #[diesel(sql_type = diesel::sql_types::Text)]

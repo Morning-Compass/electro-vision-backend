@@ -81,7 +81,7 @@ diesel::table! {
         birth_date -> Date,
         #[max_length = 70]
         account_bank_number -> Nullable<Varchar>,
-        photo -> Nullable<Bytea>,
+        photo -> Nullable<Text>,
     }
 }
 

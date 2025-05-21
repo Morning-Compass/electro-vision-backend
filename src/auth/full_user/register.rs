@@ -29,7 +29,7 @@ struct RegisterFullUserRequest {
     account_bank_number: Option<String>,
     // idk types of files
     email: String,
-    photo: Option<Vec<u8>>,
+    photo: Option<String>,
     citizenships_countries_iso3: Option<Vec<String>>,
 }
 

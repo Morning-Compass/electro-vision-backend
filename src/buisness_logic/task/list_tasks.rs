@@ -2,7 +2,7 @@ use std::io;
 
 use crate::auth::find_user::FindData;
 use crate::buisness_logic::task::db_task::DbTask;
-use crate::multimedia_handler::MultimediaHandler;
+use crate::multimedia_handler::{MultimediaHandler, MultimediaHandlerError};
 use crate::response::Response as Res;
 use crate::DPool;
 use crate::{auth::find_user::Find, est_conn};
@@ -119,14 +119,23 @@ pub async fn list_tasks(
                             (Some(content), filename)
                         }
                         Err(e) => {
-                            return match e.kind() {
-                                io::ErrorKind::NotFound => {
-                                    HttpResponse::NotFound().json(Res::new("File not found."))
+                            return match e {
+                                MultimediaHandlerError::DecodingError => {
+                                    HttpResponse::InternalServerError()
+                                        .json(Res::new("Decoding error"))
                                 }
-                                io::ErrorKind::PermissionDenied => HttpResponse::Forbidden()
-                                    .json(Res::new("Permission denied while accessing file.")),
-                                _ => HttpResponse::InternalServerError()
-                                    .json(Res::new("Failed to read multimedia file.")),
+                                MultimediaHandlerError::InvalidFileType => {
+                                    HttpResponse::InternalServerError()
+                                        .json(Res::new("Invalid file type"))
+                                }
+                                MultimediaHandlerError::MaximumFileSizeReached => {
+                                    HttpResponse::InternalServerError()
+                                        .json(Res::new("Maximum file size reached"))
+                                }
+                                MultimediaHandlerError::FileSystemError => {
+                                    HttpResponse::InternalServerError()
+                                        .json(Res::new("File system error"))
+                                }
                             };
                         }
                     },
@@ -151,7 +160,7 @@ pub async fn list_tasks(
                 res.push(task_res);
             }
 
-            HttpResponse::Ok().json(res)
+            HttpResponse::Ok().json(Res::new(res))
         }
         Err(DieselError::NotFound) => HttpResponse::NotFound().json(Res::new("No tasks found")),
         Err(err) => {

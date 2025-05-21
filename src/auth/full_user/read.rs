@@ -30,7 +30,7 @@ struct FullUserResponse {
     education: Option<String>,
     birth_date: chrono::NaiveDate,
     account_bank_number: Option<String>,
-    photo: Option<Vec<u8>>,
+    photo: Option<String>,
     citizenships: Vec<String>,
 }
 

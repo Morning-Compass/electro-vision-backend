@@ -3,7 +3,7 @@ use crate::auth::find_user::FindData;
 use crate::models_insertable;
 use crate::response::Response as Res;
 use crate::schema::problems::dsl as problems_table; // Import problems dsl
- // Import for AsChangeset
+                                                    // Import for AsChangeset
 
 use actix_web::{post, web::Json, HttpResponse};
 use diesel::result::DatabaseErrorKind;
@@ -76,7 +76,7 @@ pub async fn create_problem(
         } else {
             let mut handler = MultimediaHandler::new(multimedia_data.clone(), workspace_id);
             match handler.decode_and_store() {
-                Ok(_) => handler.get_file_path(),
+                Ok(path_buf) => Some(path_buf.to_string_lossy().into_owned()),
                 Err(MultimediaHandlerError::MaximumFileSizeReached) => {
                     return HttpResponse::PayloadTooLarge().json(Res::new(format!(
                         "Multimedia file exceeds the size limit ({} MB).",
