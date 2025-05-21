@@ -106,6 +106,7 @@ CREATE TABLE tasks (
 
 CREATE TABLE problems (
     id                 serial PRIMARY KEY,
+    workspace_id         serial REFERENCES workspaces ON UPDATE CASCADE ON DELETE CASCADE,
     worker_id          serial REFERENCES auth_users ON UPDATE CASCADE ON DELETE CASCADE,
     description        text,
     mentor_id          serial REFERENCES auth_users ON UPDATE CASCADE ON DELETE CASCADE,

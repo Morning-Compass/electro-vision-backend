@@ -137,6 +137,7 @@ diesel::table! {
 diesel::table! {
     problems (id) {
         id -> Int4,
+        workspace_id -> Int4,
         worker_id -> Int4,
         description -> Nullable<Text>,
         mentor_id -> Int4,

@@ -109,6 +109,7 @@ pub async fn create_problem(
     let new_problem = models_insertable::Problem {
         worker_id: worker.id,
         mentor_id: mentor.id,
+        workspace_id,
         description: req.description.clone(),
         problem_multimedia_path: multimedia_path,
     };
