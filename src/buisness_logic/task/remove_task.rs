@@ -2,19 +2,10 @@ use actix_web::{delete, web::Path, HttpResponse};
 
 use crate::{est_conn, DPool};
 
-use crate::multimedia_handler::{MultimediaHandler, MultimediaHandlerError};
 use crate::response::Response as Res;
 use crate::schema::tasks::dsl as tasks_table;
-use crate::schema::tasks_category as tasks_category_data;
-use crate::schema::tasks_category::dsl as tasks_category_table;
-use crate::{constants::MAX_MULTIMEDIA_SIZE, schema::tasks as tasks_data};
-use actix_web::web::Json;
-use chrono::NaiveDateTime;
 use diesel::prelude::*;
-use diesel::result::{DatabaseErrorKind, Error as DieselError};
-use serde::Deserialize;
 
-use super::status_importance::{Importance, Status};
 
 #[delete("/workspace/{workspace_id}/tasks/{task_id}/delete")]
 pub async fn remove_task(pool: DPool, path: Path<(i32, i32)>) -> HttpResponse {

@@ -57,3 +57,12 @@ pub struct Task {
     pub importance_id: i32,
     pub category_id: i32,
 }
+
+#[derive(Insertable)]
+#[diesel(table_name = crate::schema::problems)]
+pub struct Problem {
+    pub worker_id: i32,
+    pub description: Option<String>,
+    pub mentor_id: i32,
+    pub problem_multimedia_path: Option<String>,
+}
