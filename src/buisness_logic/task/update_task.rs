@@ -1,69 +1,109 @@
-use std::io;
-
-use super::status_importance::{Importance, Status};
-use crate::auth::find_user::FindData;
-use crate::multimedia_handler::MultimediaHandler;
+use crate::multimedia_handler::{MultimediaHandler, MultimediaHandlerError};
 use crate::response::Response as Res;
-use crate::schema::importance;
-use crate::schema::tasks as tasks_data;
 use crate::schema::tasks::dsl as tasks_table;
 use crate::schema::tasks_category as tasks_category_data;
 use crate::schema::tasks_category::dsl as tasks_category_table;
-use crate::schema::workspaces as workspaces_data;
-use crate::schema::workspaces::dsl as workspaces_table;
-use crate::DPool;
-use crate::{auth::find_user::Find, est_conn};
-use actix_web::post;
-use actix_web::{
-    web::{Json, Path},
-    HttpResponse,
-};
-use base64::{engine::general_purpose, Engine as _};
+use crate::{constants::MAX_MULTIMEDIA_SIZE, schema::tasks as tasks_data};
+use actix_web::{web::Json, HttpResponse};
 use chrono::NaiveDateTime;
-use diesel::query_dsl::methods::FilterDsl;
-use diesel::result::Error;
-use diesel::result::Error as DieselError;
-use diesel::Connection;
-use diesel::ExpressionMethods;
-use diesel::QueryDsl;
-use diesel::RunQueryDsl;
-use mime_guess::MimeGuess;
-use serde::{Deserialize, Serialize};
+use diesel::prelude::*;
+use diesel::result::{DatabaseErrorKind, Error as DieselError};
+use serde::Deserialize;
+
+use crate::{est_conn, DPool};
+
+use super::status_importance::{Importance, Status};
 
 #[derive(Deserialize)]
 struct UpdateTaskRequest {
     title: Option<String>,
     description: Option<String>,
+    description_multimedia: Option<String>,
     due_date: Option<NaiveDateTime>,
     status: Option<Status>,
     importance: Option<Importance>,
     category: Option<String>,
 }
 
-#[actix_web::put("/workspace/{workspace_id}/tasks/{task_id}/update")]
+// Define a changeset struct
+#[derive(AsChangeset, Default)]
+#[diesel(table_name = tasks_data)]
+struct TaskChangeset<'a> {
+    title: Option<&'a str>,
+    description: Option<&'a str>,
+    description_multimedia_path: Option<&'a str>,
+    due_date: Option<NaiveDateTime>,
+    status_id: Option<i32>,
+    importance_id: Option<i32>,
+    category_id: Option<i32>,
+}
+
+#[actix_web::put("/workspace/{workspace_id}/tasks/{task_id}")]
 pub async fn update_task(
     pool: DPool,
-    path: Path<(i32, i32)>,
+    path: actix_web::web::Path<(i32, i32)>,
     req: Json<UpdateTaskRequest>,
 ) -> HttpResponse {
-    let (workspace_id_val, task_id_val) = path.into_inner();
-    let req_data = req.into_inner(); // consume for Send safety
+    let (workspace_id, task_id) = path.into_inner();
     let conn = &mut est_conn(pool.clone());
 
-    let result = conn.transaction::<_, DieselError, _>(|conn| {
-        let category_id_val = if let Some(ref cat_name) = req_data.category {
-            match tasks_category_table::tasks_category
-                .filter(tasks_category_data::workspace_id.eq(workspace_id_val))
-                .filter(tasks_category_data::name.eq(cat_name))
-                .select(tasks_category_data::id)
+    // Handle multimedia if provided
+    let multimedia_path = if let Some(multimedia_data) = &req.description_multimedia {
+        if multimedia_data.is_empty() {
+            None
+        } else {
+            // Get assigner_id for the task to use in multimedia path
+            let assigner_id = match tasks_table::tasks
+                .filter(tasks_data::id.eq(task_id))
+                .select(tasks_data::assigner_id)
                 .first::<i32>(conn)
             {
-                Ok(id) => Some(id),
-                Err(_) => Some(
+                Ok(id) => id,
+                Err(_) => return HttpResponse::NotFound().json(Res::new("Task not found")),
+            };
+
+            let mut handler = MultimediaHandler::new(multimedia_data.to_string(), assigner_id);
+            match handler.decode_and_store() {
+                Ok(_) => handler.get_file_path(),
+                Err(MultimediaHandlerError::MaximumFileSizeReached) => {
+                    return HttpResponse::PayloadTooLarge().json(Res::new(format!(
+                        "Multimedia file exceeds the size limit ({} MB).",
+                        MAX_MULTIMEDIA_SIZE
+                    )));
+                }
+                Err(MultimediaHandlerError::DecodingError) => {
+                    return HttpResponse::BadRequest()
+                        .json(Res::new("Failed to decode multimedia data"));
+                }
+                Err(MultimediaHandlerError::FileSystemError) => {
+                    return HttpResponse::InternalServerError()
+                        .json(Res::new("Failed to save multimedia file"));
+                }
+                Err(MultimediaHandlerError::InvalidFileType) => {
+                    return HttpResponse::BadRequest().json(Res::new("Unsupported file type"));
+                }
+            }
+        }
+    } else {
+        None
+    };
+
+    let result = conn.transaction::<_, DieselError, _>(|conn| {
+        // Get or create category if provided
+        let category_id = if let Some(category_name) = &req.category {
+            match tasks_category_table::tasks_category
+                .filter(tasks_category_data::workspace_id.eq(workspace_id))
+                .filter(tasks_category_data::name.eq(category_name))
+                .select(tasks_category_data::id)
+                .first::<i32>(conn)
+                .optional()?
+            {
+                Some(id) => Some(id),
+                None => Some(
                     diesel::insert_into(tasks_category_table::tasks_category)
                         .values((
-                            tasks_category_data::workspace_id.eq(workspace_id_val),
-                            tasks_category_data::name.eq(cat_name),
+                            tasks_category_data::workspace_id.eq(workspace_id),
+                            tasks_category_data::name.eq(category_name),
                         ))
                         .returning(tasks_category_data::id)
                         .get_result(conn)?,
@@ -73,7 +113,8 @@ pub async fn update_task(
             None
         };
 
-        let status_id_val = req_data.status.map(|s| match s {
+        // Map status and importance to IDs
+        let status_id = req.status.as_ref().map(|s| match s {
             Status::HelpNeeded => 1,
             Status::Todo => 2,
             Status::InProgress => 3,
@@ -81,41 +122,33 @@ pub async fn update_task(
             Status::Canceled => 5,
         });
 
-        let importance_id_val = req_data.importance.map(|i| match i {
+        let importance_id = req.importance.as_ref().map(|i| match i {
             Importance::Low => 1,
             Importance::Medium => 2,
             Importance::High => 3,
         });
 
-        let mut query = diesel::update(
+        // Build the changeset
+        let changeset = TaskChangeset {
+            title: req.title.as_deref(),
+            description: req.description.as_deref(),
+            description_multimedia_path: multimedia_path.as_deref(),
+            due_date: req.due_date,
+            status_id,
+            importance_id,
+            category_id,
+        };
+
+        // Execute update
+        let affected_rows = diesel::update(
             tasks_table::tasks
-                .filter(tasks_data::id.eq(task_id_val))
-                .filter(tasks_data::workspace_id.eq(workspace_id_val)),
+                .filter(tasks_data::id.eq(task_id))
+                .filter(tasks_data::workspace_id.eq(workspace_id)),
         )
-        .into_boxed();
+        .set(changeset)
+        .execute(conn)?;
 
-        if let Some(ref t) = req_data.title {
-            query = query.set(tasks_data::title.eq(t));
-        }
-        if let Some(ref d) = req_data.description {
-            query = query.set(tasks_data::description.eq(d));
-        }
-        if let Some(due) = req_data.due_date {
-            query = query.set(tasks_data::due_date.eq(due));
-        }
-        if let Some(sid) = status_id_val {
-            query = query.set(tasks_data::status_id.eq(sid));
-        }
-        if let Some(iid) = importance_id_val {
-            query = query.set(tasks_data::importance_id.eq(iid));
-        }
-        if let Some(cid) = category_id_val {
-            query = query.set(tasks_data::category_id.eq(cid));
-        }
-
-        let affected = query.execute(conn)?;
-
-        if affected == 0 {
+        if affected_rows == 0 {
             Err(DieselError::NotFound)
         } else {
             Ok(())
@@ -125,6 +158,9 @@ pub async fn update_task(
     match result {
         Ok(_) => HttpResponse::Ok().json(Res::new("Task updated successfully")),
         Err(DieselError::NotFound) => HttpResponse::NotFound().json(Res::new("Task not found")),
+        Err(DieselError::DatabaseError(DatabaseErrorKind::UniqueViolation, _)) => {
+            HttpResponse::Conflict().json(Res::new("Task with this title already exists"))
+        }
         Err(err) => {
             eprintln!("Error updating task: {}", err);
             HttpResponse::InternalServerError().json(Res::new("Failed to update task"))

@@ -3,7 +3,6 @@ use crate::auth::find_user::Find;
 use crate::auth::find_user::FindData;
 use crate::models_insertable;
 use crate::response::Response as Res;
-use crate::schema::tasks::assigner_id;
 use crate::schema::tasks::dsl as tasks_table;
 use crate::schema::tasks_category as tasks_category_data;
 use crate::schema::tasks_category::dsl as tasks_category_table;
@@ -160,6 +159,7 @@ pub async fn create_task(
             Status::InProgress => 3,
             Status::Completed => 4,
             Status::Canceled => 5,
+            Status::HelpNeeded => 6,
         });
 
         let importance_id = req.importance.as_ref().map_or(2, |i| match i {

@@ -1,9 +1,9 @@
 use std::io;
 
 use crate::auth::find_user::FindData;
+use crate::buisness_logic::task::db_task::DbTask;
 use crate::multimedia_handler::MultimediaHandler;
 use crate::response::Response as Res;
-use crate::schema::importance;
 use crate::DPool;
 use crate::{auth::find_user::Find, est_conn};
 use actix_web::post;
@@ -11,28 +11,11 @@ use actix_web::{
     web::{Json, Path},
     HttpResponse,
 };
-use base64::{engine::general_purpose, Engine as _};
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use diesel::result::Error;
 use diesel::result::Error as DieselError;
-use mime_guess::MimeGuess;
 use serde::{Deserialize, Serialize};
-
-#[derive(QueryableByName, Serialize)]
-struct DbTask {
-    id: i32,
-    title: String,
-    description: Option<String>,
-    description_multimedia_path: Option<String>,
-    due_date: Option<NaiveDateTime>,
-    status: String,
-    importance: String,
-    assigner_username: String,
-    assignee_username: String,
-    category: Option<String>,
-    created_at: NaiveDateTime,
-}
 
 #[derive(Serialize)]
 struct TaskResponse {
@@ -117,7 +100,7 @@ pub async fn list_tasks(
 
         diesel::sql_query(query)
             .bind::<diesel::sql_types::Integer, _>(workspace_id)
-            .load::<DbTask>(conn)
+            .load::<DbTask>(conn) // Using DbTask instead of DbTaskModel
     });
 
     match result {
