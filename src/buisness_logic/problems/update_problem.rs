@@ -1,5 +1,6 @@
-use crate::auth::find_user::FindData;
+use crate::auth::find_user::{Find, FindData};
 use crate::constants::MAX_MULTIMEDIA_SIZE;
+use crate::models::AuthUser;
 use crate::multimedia_handler::{MultimediaHandler, MultimediaHandlerError};
 use crate::response::Response as Res;
 use crate::schema::problems as problems_data; // Import for AsChangeset
@@ -77,14 +78,32 @@ pub async fn update_problem(
         None
     };
 
-    let mentor =<Find as FindData>
+    let worker: Option<AuthUser> = match req.worker_email.clone() {
+        Some(email) => {
+            match <FindData as Find>::find_auth_user_by_email(email.clone(), pool.clone()).await {
+                Ok(user) => Some(user),
+                Err(_) => return HttpResponse::BadRequest().json(Res::new("Worker not found")),
+            }
+        }
+        None => None,
+    };
+
+    let mentor: Option<AuthUser> = match req.mentor_email.clone() {
+        Some(email) => {
+            match <FindData as Find>::find_auth_user_by_email(email.clone(), pool.clone()).await {
+                Ok(user) => Some(user),
+                Err(_) => return HttpResponse::BadRequest().json(Res::new("Mentor not found")),
+            }
+        }
+        None => None,
+    };
 
     let result = conn.transaction::<_, DieselError, _>(|conn| {
         let changeset = ProblemChangeset {
             description: req.description.as_deref(),
             problem_multimedia_path: multimedia_path.as_deref(),
-            mentor_email: req.mentor_email.as_deref(),
-            mentor_id: req.mentor_id.as_deref(),
+            worker_id: worker.map(|u| u.id),
+            mentor_id: mentor.map(|u| u.id),
         };
 
         let affected_rows = diesel::update(

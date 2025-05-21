@@ -95,7 +95,8 @@ impl Find for FindData {
         let conn = &mut est_conn(pool.clone());
         let workspace_data = workspaces_table::workspaces
             .filter(workspaces_data::id.eq(id))
-            .get_result::<Workspace>(conn);
+            .select(models::Workspace::as_select())
+            .get_results::<Workspace>(conn);
         match workspace_data {
             Ok(workspace) => Ok(workspace),
             Err(e) => Err(e),
