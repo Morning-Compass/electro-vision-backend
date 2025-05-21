@@ -92,6 +92,10 @@ async fn main() -> std::io::Result<()> {
             .service(buisness_logic::workspace::list_workspaces::list_workspaces)
             .service(buisness_logic::full_user::read::get_full_user)
             .service(buisness_logic::full_user::register::register_full_user)
+            .service(buisness_logic::problems::create_problem::create_problem)
+            .service(buisness_logic::problems::list_problems::list_problems)
+            .service(buisness_logic::problems::remove_problems::remove_problem)
+            .service(buisness_logic::problems::update_problem::update_problem)
     })
     .bind(DOMAIN)?
     .run()
