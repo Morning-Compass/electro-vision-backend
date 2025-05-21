@@ -30,6 +30,8 @@ impl MultimediaHandler {
         }
     }
 
+    // This function will now be responsible for both initial creation and "re-creation"
+    // when the file type changes. It returns the newly created PathBuf.
     pub fn decode_and_store(&mut self) -> Result<PathBuf, MultimediaHandlerError> {
         let bytes = general_purpose::STANDARD
             .decode(&self.multimedia)
@@ -42,12 +44,8 @@ impl MultimediaHandler {
             return Err(MultimediaHandlerError::MaximumFileSizeReached);
         }
 
-        let mime_type = MimeGuess::from_ext(
-            infer::get(&bytes)
-                .map(|info| info.extension())
-                .unwrap_or("bin"),
-        )
-        .first_or_octet_stream();
+        let inferred_type = infer::get(&bytes).ok_or(MultimediaHandlerError::InvalidFileType)?;
+        let mime_type = MimeGuess::from_ext(inferred_type.extension()).first_or_octet_stream();
 
         let user_dir = format!("user_multimedia/{}", self.workspace_id);
         let media_type_dir = match mime_type.type_().as_str() {
@@ -57,15 +55,12 @@ impl MultimediaHandler {
         };
         let full_dir = format!("{}/{}", user_dir, media_type_dir);
 
-        let mut file_created = false;
-        let mut created_path: Option<PathBuf> = None;
-
         if let Err(e) = fs::create_dir_all(&full_dir) {
             eprintln!("filesys err: {:?}", e);
             return Err(MultimediaHandlerError::FileSystemError);
         }
 
-        let extension = mime_type.subtype().to_string();
+        let extension = inferred_type.extension().to_string();
         let file_name = format!("{}.{}", Uuid::new_v4(), extension);
         let file_path = Path::new(&full_dir).join(&file_name);
 
@@ -73,27 +68,27 @@ impl MultimediaHandler {
             Ok(mut file) => {
                 if let Err(e) = file.write_all(&bytes) {
                     eprintln!("write error: {:?}", e);
-                    fs::remove_file(&file_path);
-                    fs::remove_dir_all(&user_dir);
+                    let _ = fs::remove_file(&file_path); // Clean up partially written file
                     return Err(MultimediaHandlerError::FileSystemError);
                 } else {
-                    file_created = true;
-                    created_path = Some(file_path.clone());
+                    self.file_name = Some(file_name); // Store the newly generated file name
+                    Ok(file_path) // Return the full path to the new file
                 }
             }
             Err(e) => {
                 eprintln!("create error: {:?}", e);
-                let _ = fs::remove_dir_all(&user_dir);
                 return Err(MultimediaHandlerError::FileSystemError);
             }
         }
-
-        self.file_name = Some(file_name);
-        Ok(created_path.unwrap())
     }
 
+    // This method is now redundant as `decode_and_store` handles new file creation.
+    // If you need to retrieve the path of a file that was just stored, you can use the
+    // PathBuf returned by `decode_and_store`.
     pub fn get_file_path(&self) -> Option<String> {
         self.file_name.as_ref().map(|name| {
+            // Simplified logic as `decode_and_store` already ensures correct directory.
+            // This is primarily for getting the path of a file that has been stored by THIS handler instance.
             let media_type = if name.ends_with(".mp4") || name.ends_with(".mov") {
                 "videos"
             } else {
@@ -117,32 +112,10 @@ impl MultimediaHandler {
         Ok(())
     }
 
-    pub fn edit_multimedia_from_path(
-        base64_content: String,
-        file_path_str: &str,
-    ) -> Result<(), MultimediaHandlerError> {
-        let bytes = general_purpose::STANDARD
-            .decode(&base64_content)
-            .map_err(|_| MultimediaHandlerError::DecodingError)?;
+    // This function is no longer needed.
+    // When a multimedia item is updated, the old one should be removed and a new one created.
+    // pub fn edit_multimedia_from_path(...) { ... }
 
-        if bytes.len() > MAX_MULTIMEDIA_SIZE as usize {
-            return Err(MultimediaHandlerError::MaximumFileSizeReached);
-        }
-
-        let file_path = Path::new(file_path_str);
-
-        if let Some(parent) = file_path.parent() {
-            fs::create_dir_all(parent).map_err(|_| MultimediaHandlerError::FileSystemError)?;
-        }
-
-        let mut file =
-            fs::File::create(file_path).map_err(|_| MultimediaHandlerError::FileSystemError)?;
-
-        file.write_all(&bytes)
-            .map_err(|_| MultimediaHandlerError::FileSystemError)?;
-
-        Ok(())
-    }
     pub fn get_file_content_base64(file_path: &str) -> Result<String, io::Error> {
         let bytes = fs::read(file_path)?;
         Ok(general_purpose::STANDARD.encode(&bytes))
@@ -152,7 +125,10 @@ impl MultimediaHandler {
         let file_path = Path::new(file_path_str);
 
         if file_path.exists() {
-            fs::remove_file(file_path).map_err(|_| MultimediaHandlerError::FileSystemError)?;
+            fs::remove_file(file_path).map_err(|e| {
+                eprintln!("failed to remove file {}: {:?}", file_path_str, e);
+                MultimediaHandlerError::FileSystemError
+            })?;
         }
 
         Ok(())

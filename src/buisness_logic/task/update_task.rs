@@ -25,13 +25,12 @@ struct UpdateTaskRequest {
     category: Option<String>,
 }
 
-// Define a changeset struct
 #[derive(AsChangeset, Default)]
 #[diesel(table_name = tasks_data)]
-struct TaskChangeset<'a> {
-    title: Option<&'a str>,
-    description: Option<&'a str>,
-    description_multimedia_path: Option<&'a str>,
+struct TaskChangeset {
+    title: Option<String>,
+    description: Option<String>,
+    description_multimedia_path: Option<Option<String>>,
     due_date: Option<NaiveDateTime>,
     status_id: Option<i32>,
     importance_id: Option<i32>,
@@ -47,49 +46,71 @@ pub async fn update_task(
     let (workspace_id, task_id) = path.into_inner();
     let conn = &mut est_conn(pool.clone());
 
-    // Handle multimedia if provided
-    let multimedia_path = if let Some(multimedia_data) = &req.description_multimedia {
-        if multimedia_data.is_empty() {
-            None
-        } else {
-            // Get assigner_id for the task to use in multimedia path
-            let assigner_id = match tasks_table::tasks
-                .filter(tasks_data::id.eq(task_id))
-                .select(tasks_data::assigner_id)
-                .first::<i32>(conn)
-            {
-                Ok(id) => id,
-                Err(_) => return HttpResponse::NotFound().json(Res::new("Task not found")),
-            };
+    let mut new_multimedia_path_for_db: Option<Option<String>> = None;
 
-            let mut handler = MultimediaHandler::new(multimedia_data.to_string(), workspace_id);
+    if let Some(multimedia_data_from_req) = &req.description_multimedia {
+        let existing_multimedia_path: Option<String> = match tasks_table::tasks
+            .filter(tasks_data::id.eq(task_id))
+            .filter(tasks_data::workspace_id.eq(workspace_id))
+            .select(tasks_data::description_multimedia_path)
+            .first::<Option<String>>(conn)
+        {
+            Ok(path_opt) => path_opt,
+            Err(DieselError::NotFound) => {
+                return HttpResponse::NotFound().json(Res::new("Task not found"))
+            }
+            Err(e) => {
+                eprintln!("Error fetching task for multimedia info: {}", e);
+                return HttpResponse::InternalServerError().json(Res::new("Database error"));
+            }
+        };
+
+        if multimedia_data_from_req.is_empty() {
+            if let Some(path_to_remove) = existing_multimedia_path {
+                let _ = MultimediaHandler::remove_file_by_path(&path_to_remove);
+            }
+            new_multimedia_path_for_db = Some(None);
+        } else {
+            let mut handler =
+                MultimediaHandler::new(multimedia_data_from_req.to_string(), workspace_id);
+
             match handler.decode_and_store() {
-                Ok(_) => handler.get_file_path(),
-                Err(MultimediaHandlerError::MaximumFileSizeReached) => {
-                    return HttpResponse::PayloadTooLarge().json(Res::new(format!(
-                        "Multimedia file exceeds the size limit ({} MB).",
-                        MAX_MULTIMEDIA_SIZE
-                    )));
+                Ok(new_file_path_buf) => {
+                    let new_file_path_str = new_file_path_buf.to_string_lossy().into_owned();
+
+                    if let Some(old_path) = existing_multimedia_path {
+                        if old_path != new_file_path_str {
+                            let _ = MultimediaHandler::remove_file_by_path(&old_path);
+                        }
+                    }
+                    new_multimedia_path_for_db = Some(Some(new_file_path_str));
                 }
-                Err(MultimediaHandlerError::DecodingError) => {
-                    return HttpResponse::BadRequest()
-                        .json(Res::new("Failed to decode multimedia data"));
-                }
-                Err(MultimediaHandlerError::FileSystemError) => {
-                    return HttpResponse::InternalServerError()
-                        .json(Res::new("Failed to save multimedia file"));
-                }
-                Err(MultimediaHandlerError::InvalidFileType) => {
-                    return HttpResponse::BadRequest().json(Res::new("Unsupported file type"));
+                Err(e) => {
+                    eprintln!("Error storing new multimedia: {:?}", e);
+                    return match e {
+                        MultimediaHandlerError::MaximumFileSizeReached => {
+                            HttpResponse::PayloadTooLarge().json(Res::new(format!(
+                                "Multimedia file exceeds the size limit ({} MB).",
+                                MAX_MULTIMEDIA_SIZE
+                            )))
+                        }
+                        MultimediaHandlerError::DecodingError => HttpResponse::BadRequest()
+                            .json(Res::new("Failed to decode multimedia data")),
+                        MultimediaHandlerError::FileSystemError => {
+                            HttpResponse::InternalServerError()
+                                .json(Res::new("Failed to save multimedia file"))
+                        }
+                        MultimediaHandlerError::InvalidFileType => {
+                            HttpResponse::BadRequest().json(Res::new("Unsupported file type"))
+                        }
+                    };
                 }
             }
         }
     } else {
-        None
-    };
+    }
 
     let result = conn.transaction::<_, DieselError, _>(|conn| {
-        // Get or create category if provided
         let category_id = if let Some(category_name) = &req.category {
             match tasks_category_table::tasks_category
                 .filter(tasks_category_data::workspace_id.eq(workspace_id))
@@ -113,7 +134,6 @@ pub async fn update_task(
             None
         };
 
-        // Map status and importance to IDs
         let status_id = req.status.as_ref().map(|s| match s {
             Status::HelpNeeded => 1,
             Status::Todo => 2,
@@ -128,18 +148,16 @@ pub async fn update_task(
             Importance::High => 3,
         });
 
-        // Build the changeset
         let changeset = TaskChangeset {
-            title: req.title.as_deref(),
-            description: req.description.as_deref(),
-            description_multimedia_path: multimedia_path.as_deref(),
+            title: req.title.clone(),
+            description: req.description.clone(),
+            description_multimedia_path: new_multimedia_path_for_db,
             due_date: req.due_date,
             status_id,
             importance_id,
             category_id,
         };
 
-        // Execute update
         let affected_rows = diesel::update(
             tasks_table::tasks
                 .filter(tasks_data::id.eq(task_id))
@@ -163,7 +181,7 @@ pub async fn update_task(
         }
         Err(err) => {
             eprintln!("Error updating task: {}", err);
-            HttpResponse::InternalServerError().json(Res::new("Failed to update task"))
+            HttpResponse::InternalServerError().json(Res::new("Server error while updating task"))
         }
     }
 }
