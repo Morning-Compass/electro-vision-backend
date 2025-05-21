@@ -88,7 +88,7 @@ async fn main() -> std::io::Result<()> {
             .service(buisness_logic::task::create_task::create_task)
             .service(buisness_logic::task::list_tasks::list_tasks)
             .service(buisness_logic::task::update_task::update_task)
-            .service(buisness_logic::task::delete_task::remove_task)
+            .service(buisness_logic::task::remove_task::remove_task)
             .service(buisness_logic::workspace::list_workspaces::list_workspaces)
             .service(buisness_logic::full_user::read::get_full_user)
             .service(buisness_logic::full_user::register::register_full_user)

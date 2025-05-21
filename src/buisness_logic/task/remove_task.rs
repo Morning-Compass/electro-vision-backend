@@ -8,7 +8,7 @@ use crate::schema::tasks::dsl as tasks_table;
 use crate::schema::tasks_category as tasks_category_data;
 use crate::schema::tasks_category::dsl as tasks_category_table;
 use crate::{constants::MAX_MULTIMEDIA_SIZE, schema::tasks as tasks_data};
-use actix_web::{web::Json, HttpResponse};
+use actix_web::web::Json;
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use diesel::result::{DatabaseErrorKind, Error as DieselError};
