@@ -15,3 +15,5 @@ Cargo.lock
 /.idea
 *.env
 migrations/
+multimedia/
+user_multimedia/
