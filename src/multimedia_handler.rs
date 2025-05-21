@@ -17,15 +17,15 @@ pub enum MultimediaHandlerError {
 
 pub struct MultimediaHandler {
     pub multimedia: String,
-    pub user_id: i32,
+    pub workspace_id: i32,
     pub file_name: Option<String>,
 }
 
 impl MultimediaHandler {
-    pub fn new(multimedia: String, user_id: i32) -> Self {
+    pub fn new(multimedia: String, workspace_id: i32) -> Self {
         Self {
             multimedia,
-            user_id,
+            workspace_id,
             file_name: None,
         }
     }
@@ -49,7 +49,7 @@ impl MultimediaHandler {
         )
         .first_or_octet_stream();
 
-        let user_dir = format!("user_multimedia/{}", self.user_id);
+        let user_dir = format!("user_multimedia/{}", self.workspace_id);
         let media_type_dir = match mime_type.type_().as_str() {
             "image" => "images",
             "video" => "videos",
@@ -99,12 +99,15 @@ impl MultimediaHandler {
             } else {
                 "images"
             };
-            format!("user_multimedia/{}/{}/{}", self.user_id, media_type, name)
+            format!(
+                "user_multimedia/{}/{}/{}",
+                self.workspace_id, media_type, name
+            )
         })
     }
 
     pub fn remove_user_data(&self) -> Result<(), MultimediaHandlerError> {
-        let user_dir = format!("user_multimedia/{}", self.user_id);
+        let user_dir = format!("user_multimedia/{}", self.workspace_id);
         if Path::new(&user_dir).exists() {
             fs::remove_dir_all(&user_dir).map_err(|e| {
                 eprintln!("failed to remove user dir: {:?}", e);

@@ -88,7 +88,7 @@ pub async fn create_task(
         if multimedia_data.is_empty() {
             None
         } else {
-            let mut handler = MultimediaHandler::new(multimedia_data.clone(), assigner.id);
+            let mut handler = MultimediaHandler::new(multimedia_data.clone(), workspace_id);
             match handler.decode_and_store() {
                 Ok(_) => handler.get_file_path(),
                 Err(MultimediaHandlerError::MaximumFileSizeReached) => {

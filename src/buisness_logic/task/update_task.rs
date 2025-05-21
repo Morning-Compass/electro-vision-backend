@@ -62,7 +62,7 @@ pub async fn update_task(
                 Err(_) => return HttpResponse::NotFound().json(Res::new("Task not found")),
             };
 
-            let mut handler = MultimediaHandler::new(multimedia_data.to_string(), assigner_id);
+            let mut handler = MultimediaHandler::new(multimedia_data.to_string(), workspace_id);
             match handler.decode_and_store() {
                 Ok(_) => handler.get_file_path(),
                 Err(MultimediaHandlerError::MaximumFileSizeReached) => {
