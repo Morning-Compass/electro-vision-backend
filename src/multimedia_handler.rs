@@ -105,7 +105,13 @@ impl MultimediaHandler {
             eprintln!("Error reading file for base64 encoding: {:?}", e);
             MultimediaHandlerError::FileSystemError
         })?;
-        Ok(base64::encode(&bytes))
+
+        let mime_type = mime_guess::from_path(&path)
+            .first_or_octet_stream()
+            .to_string();
+
+        let base64_data = base64::encode(&bytes);
+        Ok(format!("data:{};base64,{}", mime_type, base64_data))
     }
 
     pub fn remove_file_by_path(file_path: &str) -> Result<(), MultimediaHandlerError> {

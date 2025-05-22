@@ -71,8 +71,6 @@ struct GetSingleWorkspaceUserPath {
     user_id: i32, // Added user_id to the path
 }
 
-// Changed to GET, updated path to include user_id
-// Changed request body to only require owner_email for verification
 #[post("/workspace/{workspace_id}/users/{user_id}")]
 pub async fn get_singular_workspace_user_data(
     pool: DPool,
