@@ -252,7 +252,7 @@ pub async fn update_full_user(req: Json<UpdateFullUserRequest>, pool: DPool) -> 
                 citizenships,
             };
 
-            HttpResponse::Ok().json(Res::new(response))
+            HttpResponse::Ok().json(Res::new("User updated successfully"))
         }
         Err(err) => {
             eprintln!("DB error updating user: {:?}", err);

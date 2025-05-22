@@ -1,5 +1,4 @@
 use crate::auth::find_user::{Find, FindData};
-use crate::models;
 use crate::response::Response as Res;
 use crate::schema::workspaces as workspaces_data;
 use crate::schema::workspaces::dsl as workspaces_table;

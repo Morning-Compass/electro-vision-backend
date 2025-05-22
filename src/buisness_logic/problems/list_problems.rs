@@ -5,7 +5,7 @@ use crate::response::Response as Res;
 use crate::DPool;
 use actix_web::post;
 use actix_web::{
-    web::{Json, Path},
+    web::Path,
     HttpResponse,
 };
 use diesel::prelude::*;

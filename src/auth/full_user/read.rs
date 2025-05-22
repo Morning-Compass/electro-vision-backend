@@ -37,6 +37,7 @@ struct FullUserResponse {
 #[derive(Deserialize)]
 struct GetFullUserRequest {
     email: String,
+    id: i32,
 }
 
 #[post("/user/list")]
@@ -57,6 +58,12 @@ pub async fn get_full_user(req: Json<GetFullUserRequest>, pool: DPool) -> HttpRe
             return HttpResponse::InternalServerError().json(Res::new("Error fetching user"));
         }
     };
+
+    let uid = req.id;
+
+    if uid != auth_user.id {
+        return HttpResponse::Unauthorized().json(Res::new("Unauthorized, id and email dont match"));
+    }
 
     let full_user = match full_users_table::full_users
         .filter(full_users_data::user_id.eq(auth_user.id))
