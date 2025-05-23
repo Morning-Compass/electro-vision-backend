@@ -200,7 +200,7 @@ pub async fn create_task(pool: DPool, payload: Bytes, id: Path<WorkspaceId>) -> 
     });
 
     match result {
-        Ok(t) => HttpResponse::Ok().json(Res::new(t.id)),
+        Ok(t) => HttpResponse::Ok().json(Res::new(t)),
         Err(DieselError::NotFound) => {
             HttpResponse::BadRequest().json(Res::new("Workspace not found"))
         }
