@@ -1,4 +1,3 @@
-
 use crate::auth::find_user::FindData;
 use crate::buisness_logic::task::db_task::DbTask;
 use crate::multimedia_handler::{MultimediaHandler, MultimediaHandlerError};
@@ -26,8 +25,8 @@ struct TaskResponse {
     due_date: Option<NaiveDateTime>,
     status: String,
     importance: String,
-    assigner_username: String,
-    assignee_username: String,
+    assigner_email: String,
+    assignee_email: String,
     category: Option<String>,
     created_at: NaiveDateTime,
 }
@@ -82,8 +81,8 @@ pub async fn list_tasks(
                 tasks.due_date,
                 status.name as status,
                 importance.name as importance,
-                assigner.username as assigner_username,
-                assignee.username as assignee_username,
+                assigner.email as assigner_username,
+                assignee.email as assignee_username,
                 tasks_category.name as category,
                 tasks.assignment_date as created_at,
                 tasks.description_multimedia_path
@@ -150,8 +149,8 @@ pub async fn list_tasks(
                     due_date: task.due_date,
                     status: task.status,
                     importance: task.importance,
-                    assigner_username: task.assigner_username,
-                    assignee_username: task.assignee_username,
+                    assigner_email: task.assigner_username,
+                    assignee_email: task.assignee_username,
                     category: task.category,
                     created_at: task.created_at,
                 };

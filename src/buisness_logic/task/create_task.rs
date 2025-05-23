@@ -1,6 +1,7 @@
 use super::status_importance::{Importance, Status};
 use crate::auth::find_user::Find;
 use crate::auth::find_user::FindData;
+use crate::models;
 use crate::models_insertable;
 use crate::response::Response as Res;
 use crate::schema::tasks::dsl as tasks_table;
@@ -182,15 +183,15 @@ pub async fn create_task(
             category_id,
         };
 
-        diesel::insert_into(tasks_table::tasks)
+        let db_result_task = diesel::insert_into(tasks_table::tasks)
             .values(&new_task)
-            .execute(conn)?;
+            .get_result::<models::Task>(conn)?;
 
-        Ok(())
+        Ok(db_result_task)
     });
 
     match result {
-        Ok(_) => HttpResponse::Ok().json(Res::new("Task created successfully")),
+        Ok(t) => HttpResponse::Ok().json(Res::new(t.id)),
         Err(DieselError::NotFound) => {
             HttpResponse::BadRequest().json(Res::new("Workspace not found"))
         }
