@@ -8,7 +8,7 @@ use crate::schema::tasks::dsl as tasks_table;
 use crate::schema::tasks_category as tasks_category_data;
 use crate::schema::tasks_category::dsl as tasks_category_table;
 
-use actix_web::{post, web::Json, HttpResponse};
+use actix_web::{post, web::Bytes, web::Path, HttpResponse};
 use chrono::NaiveDateTime;
 use chrono::Utc;
 use diesel::result::DatabaseErrorKind;
@@ -40,11 +40,20 @@ struct CreateTaskRequest {
 }
 
 #[post("/workspace/{id}/tasks/create")]
-pub async fn create_task(
-    pool: DPool,
-    req: Json<CreateTaskRequest>,
-    id: actix_web::web::Path<WorkspaceId>,
-) -> HttpResponse {
+pub async fn create_task(pool: DPool, payload: Bytes, id: Path<WorkspaceId>) -> HttpResponse {
+    // Print the raw request body before deserialization
+    let body_str = String::from_utf8_lossy(&payload);
+    println!("Raw create task request: {}", body_str);
+
+    // Deserialize the request manually
+    let req = match serde_json::from_slice::<CreateTaskRequest>(&payload) {
+        Ok(req) => req,
+        Err(e) => {
+            eprintln!("Failed to parse create task request: {}", e);
+            return HttpResponse::BadRequest().json(Res::new("Invalid request format"));
+        }
+    };
+
     let conn = &mut est_conn(pool.clone());
     let workspace_id = id.id;
 
