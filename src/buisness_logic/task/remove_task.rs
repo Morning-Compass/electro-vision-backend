@@ -1,11 +1,11 @@
 use actix_web::{delete, web::Path, HttpResponse};
 
+use crate::models::Task;
 use crate::{est_conn, DPool};
 
 use crate::response::Response as Res;
 use crate::schema::tasks::dsl as tasks_table;
 use diesel::prelude::*;
-
 
 #[delete("/workspace/{workspace_id}/tasks/{task_id}/delete")]
 pub async fn remove_task(pool: DPool, path: Path<(i32, i32)>) -> HttpResponse {
@@ -17,13 +17,10 @@ pub async fn remove_task(pool: DPool, path: Path<(i32, i32)>) -> HttpResponse {
             .filter(tasks_table::workspace_id.eq(workspace_id_val))
             .filter(tasks_table::id.eq(task_id_val)),
     )
-    .execute(conn);
+    .get_result::<Task>(conn);
 
     match result {
-        Ok(affected) if affected > 0 => {
-            HttpResponse::Ok().json(Res::new("Task deleted successfully"))
-        }
-        Ok(_) => HttpResponse::NotFound().json(Res::new("Task not found")),
+        Ok(task) => HttpResponse::Ok().json(Res::new(task)),
         Err(err) => {
             eprintln!("Error deleting task: {}", err);
             HttpResponse::InternalServerError().json(Res::new("Failed to delete task"))
