@@ -7,7 +7,7 @@ use crate::response::Response as Res;
 use crate::schema::tasks::dsl as tasks_table;
 use diesel::prelude::*;
 
-#[delete("/workspace/{workspace_id}/tasks/{task_id}/delete")]
+#[delete("/workspace/{workspace_id}/tasks/delete/{task_id}")]
 pub async fn remove_task(pool: DPool, path: Path<(i32, i32)>) -> HttpResponse {
     let (workspace_id_val, task_id_val) = path.into_inner();
     let conn = &mut est_conn(pool);

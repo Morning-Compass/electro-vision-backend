@@ -14,7 +14,7 @@ use crate::{est_conn, DPool};
 
 use super::status_importance::{Importance, Status};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct UpdateTaskRequest {
     title: Option<String>,
     description: Option<String>,
@@ -37,7 +37,7 @@ struct TaskChangeset {
     category_id: Option<i32>,
 }
 
-#[actix_web::put("/workspace/{workspace_id}/tasks/{task_id}")]
+#[actix_web::put("/workspace/{workspace_id}/tasks/update/{task_id}")]
 pub async fn update_task(
     pool: DPool,
     path: actix_web::web::Path<(i32, i32)>,
