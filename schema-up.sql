@@ -101,7 +101,8 @@ CREATE TABLE tasks (
     status_id              serial REFERENCES status ON UPDATE CASCADE ON DELETE CASCADE,
     title                  varchar(50) NOT NULL,
     category_id            serial REFERENCES tasks_category ON UPDATE CASCADE ON DELETE CASCADE,
-    importance_id          serial REFERENCES importance ON UPDATE CASCADE ON DELETE CASCADE
+    importance_id          serial REFERENCES importance ON UPDATE CASCADE ON DELETE CASCADE,
+    task_type              varchar(20) DEFAULT 'DEFAULT'
 );
 
 CREATE TABLE problems (

@@ -5,6 +5,7 @@ use crate::models;
 use crate::models_insertable;
 use crate::response::Response as Res;
 use crate::schema::tasks::dsl as tasks_table;
+use crate::schema::tasks::task_type;
 use crate::schema::tasks_category as tasks_category_data;
 use crate::schema::tasks_category::dsl as tasks_category_table;
 
@@ -37,6 +38,7 @@ struct CreateTaskRequest {
     title: String,
     importance: Option<Importance>,
     category: Option<String>,
+    task_type: Option<String>,
 }
 
 #[post("/workspace/{id}/tasks/create")]
@@ -52,6 +54,18 @@ pub async fn create_task(pool: DPool, payload: Bytes, id: Path<WorkspaceId>) -> 
             eprintln!("Failed to parse create task request: {}", e);
             return HttpResponse::BadRequest().json(Res::new("Invalid request format"));
         }
+    };
+
+    let task_type_value = match req.task_type {
+        Some(t) => {
+            if t != "DEFAULT" && t != "MAP" {
+                return HttpResponse::BadRequest().json(Res::new(
+                    "Incorrect Task Type. Allowed types are 'DEFAULT' or 'MAP'.",
+                ));
+            }
+            t
+        }
+        None => "DEFAULT".to_string(),
     };
 
     let conn = &mut est_conn(pool.clone());
@@ -190,6 +204,7 @@ pub async fn create_task(pool: DPool, payload: Bytes, id: Path<WorkspaceId>) -> 
             title: req.title.clone(),
             importance_id,
             category_id,
+            task_type: Some(task_type_value),
         };
 
         let db_result_task = diesel::insert_into(tasks_table::tasks)

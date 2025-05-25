@@ -26,4 +26,6 @@ pub struct DbTask {
     pub category: Option<String>,
     #[diesel(sql_type = diesel::sql_types::Timestamp)]
     pub created_at: NaiveDateTime,
+    #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Text>)]
+    pub task_type: Option<String>,
 }

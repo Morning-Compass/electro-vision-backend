@@ -97,6 +97,7 @@ pub struct Task {
     pub title: String,
     pub category_id: i32,
     pub importance_id: i32,
+    pub task_type: Option<String>,
 }
 
 #[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]

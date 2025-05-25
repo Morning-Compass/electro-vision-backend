@@ -9,6 +9,7 @@ use crate::models;
 use crate::models::WorkspaceInvitation;
 use crate::models_insertable;
 use crate::response::Response as Res;
+use crate::schema::positions::dsl as positions_table;
 use crate::schema::workspace_invitations as workspace_invitations_data;
 use crate::schema::workspace_invitations::dsl as workspace_invitations_table;
 use crate::schema::workspace_roles::dsl as workspace_roles_table;
@@ -71,6 +72,20 @@ pub async fn add_user_to_workspace(pool: DPool, req: actix_web::web::Path<Token>
                 let workspace_role = models_insertable::WorkspaceRole {
                     user_id: user.id,
                     name: WORKSPACE_ROLES[3].to_string(),
+                };
+
+                let not_assigned_position = match positions_table::positions
+                    .filter(positions_table::name.eq("Not Assigned"))
+                    .first::<models::Position>(conn)
+                    .optional()?
+                {
+                    Some(pos) => pos,
+                    None => diesel::insert_into(positions_table::positions)
+                        .values(models_insertable::Position {
+                            workspace_id: workspace_invitation.workspace_id,
+                            name: Some("Not Assigned".to_string()),
+                        })
+                        .get_result(conn)?,
                 };
 
                 let inserted_role = diesel::insert_into(workspace_roles_table::workspace_roles)

@@ -174,6 +174,7 @@ diesel::table! {
         title -> Varchar,
         category_id -> Int4,
         importance_id -> Int4,
+        task_type -> Nullable<Varchar>,
     }
 }
 

@@ -29,6 +29,7 @@ struct TaskResponse {
     assignee_email: String,
     category: Option<String>,
     created_at: NaiveDateTime,
+    task_type: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -85,7 +86,8 @@ pub async fn list_tasks(
                 assignee.email as assignee_username,
                 tasks_category.name as category,
                 tasks.assignment_date as created_at,
-                tasks.description_multimedia_path
+                tasks.description_multimedia_path,
+                tasks.task_type
             FROM tasks
             JOIN status ON tasks.status_id = status.id
             JOIN importance ON tasks.importance_id = importance.id
@@ -153,6 +155,7 @@ pub async fn list_tasks(
                     assignee_email: task.assignee_username,
                     category: task.category,
                     created_at: task.created_at,
+                    task_type: task.task_type,
                 };
 
                 res.push(task_res);

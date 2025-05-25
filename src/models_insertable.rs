@@ -56,6 +56,7 @@ pub struct Task {
     pub title: String,
     pub importance_id: i32,
     pub category_id: i32,
+    pub task_type: Option<String>,
 }
 
 #[derive(Insertable)]
@@ -66,4 +67,10 @@ pub struct Problem {
     pub mentor_id: i32,
     pub workspace_id: i32,
     pub problem_multimedia_path: Option<String>,
+}
+#[derive(Insertable)]
+#[diesel(table_name = crate::schema::positions)]
+pub struct Position {
+    pub workspace_id: i32,
+    pub name: Option<String>,
 }
