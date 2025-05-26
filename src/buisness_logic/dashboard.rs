@@ -215,24 +215,39 @@ pub async fn dashboard(pool: DPool, req: Json<DashboardRequest>) -> HttpResponse
     };
 
     let nationality_data = {
-        let raw_results = uc_dsl::users_citizenships
-            .inner_join(c_dsl::countries.on(c_dsl::id.eq(uc_dsl::country_id)))
-            .inner_join(wu_dsl::workspace_users.on(wu_dsl::user_id.eq(uc_dsl::user_id)))
+        // 1. Get all unique user_ids associated with the workspace_ids
+        let user_ids_in_workspaces: Vec<i32> = wu_dsl::workspace_users
             .filter(wu_dsl::workspace_id.eq_any(&workspace_ids))
+            .select(wu_dsl::user_id)
+            .distinct()
+            .load::<i32>(conn)
+            .unwrap_or_default();
+
+        // 2. Fetch country_of_origin for these users from full_users
+        //    Group by country name and count directly in the query.
+        let raw_results = fu_dsl::full_users
+            .inner_join(c_dsl::countries.on(c_dsl::id.eq(fu_dsl::country_of_origin_id)))
+            .filter(fu_dsl::user_id.eq_any(&user_ids_in_workspaces))
             .group_by(c_dsl::name)
-            .select((c_dsl::name.nullable(), diesel::dsl::count_star())) // Add .nullable() here
+            .select((c_dsl::name.nullable(), diesel::dsl::count_star()))
             .load::<(Option<String>, i64)>(conn)
             .unwrap_or_default();
 
-        let total: i64 = raw_results.iter().map(|(_, count)| *count).sum();
+        // 3. Calculate total count of users with origin country data
+        let total_origin_users: i64 = raw_results.iter().map(|(_, count)| *count).sum();
 
+        // 4. Map to NationalityData struct
         raw_results
             .into_iter()
-            .map(|(country, count)| {
-                let name = country.unwrap_or_else(|| "Unknown".to_string());
-                let percentage = if total > 0 { (count * 100) / total } else { 0 };
+            .map(|(country_name_opt, count)| {
+                let country_name = country_name_opt.unwrap_or_else(|| "Unknown Origin".to_string());
+                let percentage = if total_origin_users > 0 {
+                    (count * 100) / total_origin_users
+                } else {
+                    0
+                };
                 NationalityData {
-                    country: name,
+                    country: country_name,
                     count,
                     percentage,
                 }
