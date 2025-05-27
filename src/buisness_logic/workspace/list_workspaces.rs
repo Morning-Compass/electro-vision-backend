@@ -26,7 +26,8 @@ struct WorkspaceResponse {
     geolocation: Option<String>,
     ev_subscription: String,
     name: String,
-    role: String, //
+    role: String,
+    owner_id: i32, // <-- NEW FIELD
 }
 
 #[post("/workspace/list")]
@@ -73,6 +74,7 @@ async fn get_workspaces(
             evs::subscription,
             ws::name,
             wr::name, // the user's role in this workspace
+            ws::owner_id,
         ))
         .load::<(
             i32,
@@ -83,6 +85,7 @@ async fn get_workspaces(
             String,
             String,
             String, // role name
+            i32,
         )>(conn)?;
 
     let workspaces = results
@@ -97,6 +100,7 @@ async fn get_workspaces(
                 ev_subscription,
                 name,
                 role,
+                owner_id,
             )| {
                 WorkspaceResponse {
                     id,
@@ -107,6 +111,7 @@ async fn get_workspaces(
                     ev_subscription,
                     name,
                     role, // include this in the response struct
+                    owner_id,
                 }
             },
         )

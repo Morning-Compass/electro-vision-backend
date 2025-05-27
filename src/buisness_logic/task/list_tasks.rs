@@ -49,60 +49,86 @@ pub async fn list_tasks(
     req: Json<ListTasksRequest>,
 ) -> HttpResponse {
     let workspace_id = path.id;
+    let requester_email = req.owner_email.clone();
 
-    let workspaces = match <FindData as Find>::find_workspace_by_owner_email(
-        req.owner_email.clone(),
+    // Step 1: Check if requester is the owner of the workspace
+    let is_owner = match <FindData as Find>::find_workspace_by_owner_email(
+        requester_email.clone(),
         pool.clone(),
     )
     .await
     {
-        Ok(w) => w,
-        Err(_) => {
-            return HttpResponse::BadRequest()
-                .json(Res::new("Workspace not found for owner's email or id"));
-        }
-    };
-
-    match workspaces.into_iter().find(|w| w.id == workspace_id) {
-        Some(_) => {}
-        None => {
-            return HttpResponse::BadRequest()
-                .json(Res::new("Workspace not found for owner's email or id"));
-        }
+        Ok(workspaces) => workspaces.iter().any(|w| w.id == workspace_id),
+        Err(_) => false,
     };
 
     let conn = &mut est_conn(pool);
 
     let result = conn.transaction::<_, Error, _>(|conn| {
-        let query = r#"
-            SELECT
-                tasks.id,
-                tasks.title,
-                tasks.description,
-                tasks.due_date,
-                status.name as status,
-                importance.name as importance,
-                assigner.email as assigner_username,
-                assignee.email as assignee_username,
-                tasks_category.name as category,
-                tasks.assignment_date as created_at,
-                tasks.description_multimedia_path,
-                tasks.task_type
-            FROM tasks
-            JOIN status ON tasks.status_id = status.id
-            JOIN importance ON tasks.importance_id = importance.id
-            JOIN auth_users assigner ON tasks.assigner_id = assigner.id
-            JOIN auth_users assignee ON tasks.worker_id = assignee.id
-            LEFT JOIN tasks_category ON tasks.category_id = tasks_category.id
-            WHERE tasks.workspace_id = $1
-            ORDER BY tasks.assignment_date DESC
-        "#;
+        // Step 2: Adjust SQL based on ownership
+        let (query, binds): (&str, Vec<diesel::sql_types::Untyped>);
 
-        diesel::sql_query(query)
-            .bind::<diesel::sql_types::Integer, _>(workspace_id)
-            .load::<DbTask>(conn) // Using DbTask instead of DbTaskModel
+        if is_owner {
+            // Query all tasks in the workspace
+            query = r#"
+                SELECT
+                    tasks.id,
+                    tasks.title,
+                    tasks.description,
+                    tasks.due_date,
+                    status.name as status,
+                    importance.name as importance,
+                    assigner.email as assigner_username,
+                    assignee.email as assignee_username,
+                    tasks_category.name as category,
+                    tasks.assignment_date as created_at,
+                    tasks.description_multimedia_path,
+                    tasks.task_type
+                FROM tasks
+                JOIN status ON tasks.status_id = status.id
+                JOIN importance ON tasks.importance_id = importance.id
+                JOIN auth_users assigner ON tasks.assigner_id = assigner.id
+                JOIN auth_users assignee ON tasks.worker_id = assignee.id
+                LEFT JOIN tasks_category ON tasks.category_id = tasks_category.id
+                WHERE tasks.workspace_id = $1
+                ORDER BY tasks.assignment_date DESC
+            "#;
+            diesel::sql_query(query)
+                .bind::<diesel::sql_types::Integer, _>(workspace_id)
+                .load::<DbTask>(conn)
+        } else {
+            // Query only tasks assigned to this user in the workspace
+            query = r#"
+                SELECT
+                    tasks.id,
+                    tasks.title,
+                    tasks.description,
+                    tasks.due_date,
+                    status.name as status,
+                    importance.name as importance,
+                    assigner.email as assigner_username,
+                    assignee.email as assignee_username,
+                    tasks_category.name as category,
+                    tasks.assignment_date as created_at,
+                    tasks.description_multimedia_path,
+                    tasks.task_type
+                FROM tasks
+                JOIN status ON tasks.status_id = status.id
+                JOIN importance ON tasks.importance_id = importance.id
+                JOIN auth_users assigner ON tasks.assigner_id = assigner.id
+                JOIN auth_users assignee ON tasks.worker_id = assignee.id
+                LEFT JOIN tasks_category ON tasks.category_id = tasks_category.id
+                WHERE tasks.workspace_id = $1 AND assignee.email = $2
+                ORDER BY tasks.assignment_date DESC
+            "#;
+            diesel::sql_query(query)
+                .bind::<diesel::sql_types::Integer, _>(workspace_id)
+                .bind::<diesel::sql_types::Text, _>(requester_email)
+                .load::<DbTask>(conn)
+        }
     });
 
+    // Same response formatting logic
     match result {
         Ok(tasks) => {
             let mut res: Vec<TaskResponse> = Vec::new();
@@ -115,7 +141,6 @@ pub async fn list_tasks(
                                 .file_name()
                                 .and_then(|f| f.to_str())
                                 .map(|s| s.to_string());
-
                             (Some(content), filename)
                         }
                         Err(e) => {
@@ -142,7 +167,7 @@ pub async fn list_tasks(
                     None => (None, None),
                 };
 
-                let task_res = TaskResponse {
+                res.push(TaskResponse {
                     id: task.id,
                     title: task.title,
                     description: task.description,
@@ -156,9 +181,7 @@ pub async fn list_tasks(
                     category: task.category,
                     created_at: task.created_at,
                     task_type: task.task_type,
-                };
-
-                res.push(task_res);
+                });
             }
 
             HttpResponse::Ok().json(Res::new(res))
