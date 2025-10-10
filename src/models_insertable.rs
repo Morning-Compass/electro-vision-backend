@@ -49,11 +49,28 @@ pub struct Task {
     pub assigner_id: i32,
     pub worker_id: i32, // asignee
     pub description: Option<String>,
-    pub description_multimedia: Option<Vec<u8>>,
+    pub description_multimedia_path: Option<String>,
     pub assignment_date: NaiveDateTime,
     pub due_date: Option<NaiveDateTime>,
     pub status_id: i32,
     pub title: String,
     pub importance_id: i32,
     pub category_id: i32,
+    pub task_type: Option<String>,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = crate::schema::problems)]
+pub struct Problem {
+    pub worker_id: i32,
+    pub description: Option<String>,
+    pub mentor_id: i32,
+    pub workspace_id: i32,
+    pub problem_multimedia_path: Option<String>,
+}
+#[derive(Insertable)]
+#[diesel(table_name = crate::schema::positions)]
+pub struct Position {
+    pub workspace_id: i32,
+    pub name: Option<String>,
 }

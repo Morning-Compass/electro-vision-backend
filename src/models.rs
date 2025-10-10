@@ -90,13 +90,14 @@ pub struct Task {
     pub assigner_id: i32,
     pub worker_id: i32, // asignee
     pub description: Option<String>,
-    pub description_multimedia: Option<Vec<u8>>,
+    pub description_multimedia_path: Option<String>,
     pub assignment_date: NaiveDateTime,
     pub due_date: Option<NaiveDateTime>,
     pub status_id: i32,
     pub title: String,
     pub category_id: i32,
     pub importance_id: i32,
+    pub task_type: Option<String>,
 }
 
 #[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]
@@ -144,7 +145,7 @@ pub struct FullUser {
     pub education: Option<String>,
     pub birth_date: NaiveDate,
     pub account_bank_number: Option<String>,
-    pub photo: Option<Vec<u8>>,
+    pub photo: Option<String>,
 }
 
 #[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]
@@ -172,9 +173,10 @@ pub struct PhoneDialCode {
 pub struct Problem {
     pub id: i32,
     pub worker_id: i32,
+    pub workspace_id: i32,
     pub description: Option<String>,
     pub mentor_id: i32,
-    pub problem_multimedia: Option<Vec<u8>>,
+    pub problem_multimedia_path: Option<String>,
 }
 
 #[derive(Queryable, Debug, Serialize, Deserialize, Selectable, Insertable)]

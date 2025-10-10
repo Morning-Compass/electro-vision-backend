@@ -16,6 +16,14 @@ pub const ROLES: [&str; 2] = ["USER", "ADMIN"];
 pub const WORKSPACE_ROLES: [&str; 4] = ["CREATOR", "ADMIN", "MANAGER", "WORKER"];
 pub const TASK_CATEGORY: [&str; 4] = ["NONE", "ELECTRICAL", "VERIFICATION", "OTHER"];
 pub const SMTP: &str = "smtp.gmail.com";
+pub const MAX_MULTIMEDIA_SIZE: u64 = 4294967296;
+pub mod status {
+    pub const HELP_NEEDED: i32 = 1;
+    pub const TODO: i32 = 2;
+    pub const IN_PROGRESS: i32 = 3;
+    pub const COMPLETED: i32 = 4;
+    pub const CANCELED: i32 = 5;
+}
 pub const EMAIL_CSS_TEMPLATE: &str = r#"
     body, html {
         margin: 0;

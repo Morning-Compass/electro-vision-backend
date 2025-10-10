@@ -26,6 +26,8 @@ struct WorkspaceResponse {
     geolocation: Option<String>,
     ev_subscription: String,
     name: String,
+    role: String,
+    owner_id: i32, // <-- NEW FIELD
 }
 
 #[post("/workspace/list")]
@@ -47,23 +49,32 @@ async fn get_workspaces(
     conn: &mut DBPConn,
     owner_email: String,
 ) -> Result<Vec<WorkspaceResponse>, DieselError> {
-    let results = workspaces_table::workspaces
-        .inner_join(
-            auth_users_table::auth_users.on(workspaces_table::owner_id.eq(auth_users_table::id)),
-        )
-        .inner_join(
-            ev_subscriptions_table::ev_subscriptions
-                .on(workspaces_table::ev_subscription_id.eq(ev_subscriptions_table::id)),
-        )
-        .filter(auth_users_data::email.eq(owner_email))
+    use crate::schema::{
+        auth_users::dsl as au, ev_subscriptions::dsl as evs, workspace_roles::dsl as wr,
+        workspace_users::dsl as wu, workspaces::dsl as ws,
+    };
+
+    // Step 1: Find user by email to get their ID
+    let user = au::auth_users
+        .filter(au::email.eq(owner_email.clone()))
+        .first::<crate::models::AuthUser>(conn)?;
+
+    // Step 2: Join workspaces the user is a part of (via workspace_users)
+    let results = ws::workspaces
+        .inner_join(wu::workspace_users.on(wu::workspace_id.eq(ws::id)))
+        .inner_join(evs::ev_subscriptions.on(ws::ev_subscription_id.eq(evs::id)))
+        .inner_join(wr::workspace_roles.on(wr::id.eq(wu::workspace_role_id)))
+        .filter(wu::user_id.eq(user.id))
         .select((
-            workspaces_table::id,
-            workspaces_table::plan_file_name,
-            workspaces_table::start_date,
-            workspaces_table::finish_date,
-            workspaces_table::geolocation,
-            ev_subscriptions_table::subscription,
-            workspaces_table::name,
+            ws::id,
+            ws::plan_file_name,
+            ws::start_date,
+            ws::finish_date,
+            ws::geolocation,
+            evs::subscription,
+            ws::name,
+            wr::name, // the user's role in this workspace
+            ws::owner_id,
         ))
         .load::<(
             i32,
@@ -73,12 +84,24 @@ async fn get_workspaces(
             Option<String>,
             String,
             String,
+            String, // role name
+            i32,
         )>(conn)?;
 
     let workspaces = results
         .into_iter()
         .map(
-            |(id, plan_file_name, start_date, finish_date, geolocation, ev_subscription, name)| {
+            |(
+                id,
+                plan_file_name,
+                start_date,
+                finish_date,
+                geolocation,
+                ev_subscription,
+                name,
+                role,
+                owner_id,
+            )| {
                 WorkspaceResponse {
                     id,
                     plan_file_name,
@@ -87,6 +110,8 @@ async fn get_workspaces(
                     geolocation,
                     ev_subscription,
                     name,
+                    role, // include this in the response struct
+                    owner_id,
                 }
             },
         )

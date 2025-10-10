@@ -1,12 +1,15 @@
+use super::status_importance::{Importance, Status};
 use crate::auth::find_user::Find;
 use crate::auth::find_user::FindData;
+use crate::models;
 use crate::models_insertable;
 use crate::response::Response as Res;
 use crate::schema::tasks::dsl as tasks_table;
+use crate::schema::tasks::task_type;
 use crate::schema::tasks_category as tasks_category_data;
 use crate::schema::tasks_category::dsl as tasks_category_table;
 
-use actix_web::{post, web::Json, HttpResponse};
+use actix_web::{post, web::Bytes, web::Path, HttpResponse};
 use chrono::NaiveDateTime;
 use chrono::Utc;
 use diesel::result::DatabaseErrorKind;
@@ -15,25 +18,9 @@ use diesel::QueryDsl;
 use diesel::{Connection, ExpressionMethods, RunQueryDsl};
 use serde::Deserialize;
 
+use crate::constants::MAX_MULTIMEDIA_SIZE;
+use crate::multimedia_handler::{MultimediaHandler, MultimediaHandlerError};
 use crate::{est_conn, DPool};
-
-#[derive(Deserialize)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-enum Status {
-    HelpNeeded,
-    Todo,
-    InProgress,
-    Completed,
-    Canceled,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-enum Importance {
-    Low,
-    Medium,
-    High,
-}
 
 #[derive(Deserialize)]
 struct WorkspaceId {
@@ -45,20 +32,42 @@ struct CreateTaskRequest {
     assigner_email: String,
     assignee_email: String,
     description: Option<String>,
-    description_multimedia: Option<Vec<u8>>,
+    description_multimedia: Option<String>,
     due_date: Option<NaiveDateTime>,
     status: Option<Status>,
     title: String,
     importance: Option<Importance>,
     category: Option<String>,
+    task_type: Option<String>,
 }
 
 #[post("/workspace/{id}/tasks/create")]
-pub async fn create_task(
-    pool: DPool,
-    req: Json<CreateTaskRequest>,
-    id: actix_web::web::Path<WorkspaceId>,
-) -> HttpResponse {
+pub async fn create_task(pool: DPool, payload: Bytes, id: Path<WorkspaceId>) -> HttpResponse {
+    // Print the raw request body before deserialization
+    let body_str = String::from_utf8_lossy(&payload);
+    println!("Raw create task request: {}", body_str);
+
+    // Deserialize the request manually
+    let req = match serde_json::from_slice::<CreateTaskRequest>(&payload) {
+        Ok(req) => req,
+        Err(e) => {
+            eprintln!("Failed to parse create task request: {}", e);
+            return HttpResponse::BadRequest().json(Res::new("Invalid request format"));
+        }
+    };
+
+    let task_type_value = match req.task_type {
+        Some(t) => {
+            if t != "DEFAULT" && t != "MAP" {
+                return HttpResponse::BadRequest().json(Res::new(
+                    "Incorrect Task Type. Allowed types are 'DEFAULT' or 'MAP'.",
+                ));
+            }
+            t
+        }
+        None => "DEFAULT".to_string(),
+    };
+
     let conn = &mut est_conn(pool.clone());
     let workspace_id = id.id;
 
@@ -97,6 +106,38 @@ pub async fn create_task(
             return HttpResponse::BadRequest()
                 .json(Res::new("Workspace not found for assigner's email"));
         }
+    };
+
+    let multimedia_path = if let Some(multimedia_data) = &req.description_multimedia {
+        if multimedia_data.is_empty() {
+            None
+        } else {
+            let mut handler = MultimediaHandler::new(multimedia_data.clone(), workspace_id);
+            match handler.decode_and_store() {
+                Ok(path_buf) => Some(path_buf.to_string_lossy().into_owned()),
+                Err(MultimediaHandlerError::MaximumFileSizeReached) => {
+                    return HttpResponse::PayloadTooLarge().json(Res::new(format!(
+                        "Multimedia file exceeds the size limit ({} MB).",
+                        MAX_MULTIMEDIA_SIZE
+                    )));
+                }
+                Err(MultimediaHandlerError::DecodingError) => {
+                    return HttpResponse::InternalServerError()
+                        .json(Res::new("Failed to decode multimedia data."));
+                }
+                Err(MultimediaHandlerError::FileSystemError) => {
+                    return HttpResponse::InternalServerError().json(Res::new(
+                        "A file system error occurred while saving the file.",
+                    ));
+                }
+                Err(MultimediaHandlerError::InvalidFileType) => {
+                    return HttpResponse::UnsupportedMediaType()
+                        .json(Res::new("Unsupported multimedia file type."));
+                }
+            }
+        }
+    } else {
+        None
     };
 
     let result = conn.transaction::<_, DieselError, _>(|conn| {
@@ -138,11 +179,11 @@ pub async fn create_task(
         };
 
         let status_id = req.status.as_ref().map_or(2, |s| match s {
-            Status::HelpNeeded => 1,
             Status::Todo => 2,
             Status::InProgress => 3,
             Status::Completed => 4,
             Status::Canceled => 5,
+            Status::HelpNeeded => 6,
         });
 
         let importance_id = req.importance.as_ref().map_or(2, |i| match i {
@@ -156,24 +197,25 @@ pub async fn create_task(
             assigner_id: assigner.id,
             worker_id: assignee.id,
             description: req.description.clone(),
-            description_multimedia: req.description_multimedia.clone(),
+            description_multimedia_path: multimedia_path,
             assignment_date: Utc::now().naive_utc(),
             due_date: req.due_date,
             status_id,
             title: req.title.clone(),
             importance_id,
             category_id,
+            task_type: Some(task_type_value),
         };
 
-        diesel::insert_into(tasks_table::tasks)
+        let db_result_task = diesel::insert_into(tasks_table::tasks)
             .values(&new_task)
-            .execute(conn)?;
+            .get_result::<models::Task>(conn)?;
 
-        Ok(())
+        Ok(db_result_task)
     });
 
     match result {
-        Ok(_) => HttpResponse::Ok().json(Res::new("Task created successfully")),
+        Ok(t) => HttpResponse::Ok().json(Res::new(t)),
         Err(DieselError::NotFound) => {
             HttpResponse::BadRequest().json(Res::new("Workspace not found"))
         }

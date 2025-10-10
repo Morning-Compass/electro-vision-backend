@@ -13,7 +13,7 @@ use crate::schema::users_citizenships as users_citizenships_data;
 use crate::{est_conn, response::Response as Res};
 use crate::{models, DPool};
 use actix_web::post;
-use actix_web::{get, web::Json, HttpResponse};
+use actix_web::{web::Json, HttpResponse};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl, SelectableHelper};
 use serde::{Deserialize, Serialize};
 
@@ -30,13 +30,14 @@ struct FullUserResponse {
     education: Option<String>,
     birth_date: chrono::NaiveDate,
     account_bank_number: Option<String>,
-    photo: Option<Vec<u8>>,
+    photo: Option<String>,
     citizenships: Vec<String>,
 }
 
 #[derive(Deserialize)]
 struct GetFullUserRequest {
     email: String,
+    id: i32,
 }
 
 #[post("/user/list")]
@@ -57,6 +58,12 @@ pub async fn get_full_user(req: Json<GetFullUserRequest>, pool: DPool) -> HttpRe
             return HttpResponse::InternalServerError().json(Res::new("Error fetching user"));
         }
     };
+
+    let uid = req.id;
+
+    if uid != auth_user.id {
+        return HttpResponse::Unauthorized().json(Res::new("Unauthorized, id and email dont match"));
+    }
 
     let full_user = match full_users_table::full_users
         .filter(full_users_data::user_id.eq(auth_user.id))

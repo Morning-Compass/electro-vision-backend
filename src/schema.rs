@@ -81,7 +81,7 @@ diesel::table! {
         birth_date -> Date,
         #[max_length = 70]
         account_bank_number -> Nullable<Varchar>,
-        photo -> Nullable<Bytea>,
+        photo -> Nullable<Text>,
     }
 }
 
@@ -137,10 +137,11 @@ diesel::table! {
 diesel::table! {
     problems (id) {
         id -> Int4,
+        workspace_id -> Int4,
         worker_id -> Int4,
         description -> Nullable<Text>,
         mentor_id -> Int4,
-        problem_multimedia -> Nullable<Bytea>,
+        problem_multimedia_path -> Nullable<Varchar>,
     }
 }
 
@@ -166,13 +167,14 @@ diesel::table! {
         assigner_id -> Int4,
         worker_id -> Int4,
         description -> Nullable<Text>,
-        description_multimedia -> Nullable<Bytea>,
+        description_multimedia_path -> Nullable<Varchar>,
         assignment_date -> Timestamp,
         due_date -> Nullable<Timestamp>,
         status_id -> Int4,
         title -> Varchar,
         category_id -> Int4,
         importance_id -> Int4,
+        task_type -> Nullable<Varchar>,
     }
 }
 

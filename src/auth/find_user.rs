@@ -19,6 +19,7 @@ pub trait Find {
     ) -> Result<Vec<Workspace>, DieselError>;
     async fn find_full_user_by_email(email: String, pool: DPool) -> Result<FullUser, DieselError>;
     async fn find_auth_user_by_id(id: i32, pool: DPool) -> Result<User, DieselError>;
+    async fn find_workspace_by_id(id: i32, pool: DPool) -> Result<Vec<Workspace>, DieselError>;
 }
 
 impl Find for FindData {
@@ -87,6 +88,17 @@ impl Find for FindData {
             .first(conn);
         match user_data {
             Ok(user) => Ok(user),
+            Err(e) => Err(e),
+        }
+    }
+    async fn find_workspace_by_id(id: i32, pool: DPool) -> Result<Vec<Workspace>, DieselError> {
+        let conn = &mut est_conn(pool.clone());
+        let workspace_data = workspaces_table::workspaces
+            .filter(workspaces_data::id.eq(id))
+            .select(models::Workspace::as_select())
+            .get_results::<Workspace>(conn);
+        match workspace_data {
+            Ok(workspace) => Ok(workspace),
             Err(e) => Err(e),
         }
     }

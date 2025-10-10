@@ -6,6 +6,7 @@ pub use response_user::ResponseUser;
 pub use user_with_roles::UserWithRoles;
 pub mod confirmation_token;
 pub mod find_user;
+pub mod full_user;
 pub mod jwt;
 pub mod login;
 pub mod register;

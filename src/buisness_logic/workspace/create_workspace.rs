@@ -5,6 +5,7 @@ use crate::models;
 use crate::models_insertable;
 use crate::models_insertable::NewWorkspace;
 use crate::response::Response as Res;
+use crate::schema::positions::dsl as positions_table;
 use crate::schema::workspace_roles::dsl as workspace_roles_table;
 use crate::schema::workspace_users::dsl as workspace_users_table;
 use crate::schema::workspaces::dsl as workspaces_table;
@@ -13,6 +14,9 @@ use chrono::NaiveDateTime;
 use chrono::Utc;
 use diesel::result::DatabaseErrorKind;
 use diesel::result::Error as DieselError;
+use diesel::ExpressionMethods;
+use diesel::OptionalExtension;
+use diesel::QueryDsl;
 use diesel::{Connection, RunQueryDsl};
 use serde::Deserialize;
 
@@ -56,6 +60,20 @@ pub async fn create_workspace(pool: DPool, req: Json<CreateWorkspaceRequest>) ->
         let workspace = diesel::insert_into(workspaces_table::workspaces)
             .values(&new_workspace)
             .get_result::<models::Workspace>(conn)?;
+
+        let not_assigned_position = match positions_table::positions
+            .filter(positions_table::name.eq("Not Assigned"))
+            .first::<models::Position>(conn)
+            .optional()?
+        {
+            Some(pos) => pos,
+            None => diesel::insert_into(positions_table::positions)
+                .values(models_insertable::Position {
+                    workspace_id: workspace.id,
+                    name: Some("Not Assigned".to_string()),
+                })
+                .get_result(conn)?,
+        };
 
         // Add workspace role
         let workspace_role = models_insertable::WorkspaceRole {
