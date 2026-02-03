@@ -265,7 +265,8 @@ diesel::joinable!(full_users -> countries (country_of_origin_id));
 diesel::joinable!(full_users -> phone_dial_codes (phonde_dial_code_id));
 diesel::joinable!(messages -> auth_users (sender_id));
 diesel::joinable!(messages -> conversations (conversation_id));
-diesel::joinable!(positions -> auth_users (workspace_id));
+// FIXED: positions should join to workspaces, not auth_users
+diesel::joinable!(positions -> workspaces (workspace_id));
 diesel::joinable!(tasks -> status (status_id));
 diesel::joinable!(tasks -> workspaces (workspace_id));
 diesel::joinable!(tasks_category -> workspaces (workspace_id));
