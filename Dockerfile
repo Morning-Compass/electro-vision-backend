@@ -1,5 +1,5 @@
 #FROM debian:bookworm-slim
-FROM rust:1.82-slim-bullseye
+FROM rust:1.93-slim-bullseye
 
 # Install runtime dependencies
 #RUN apt-get update -y && \

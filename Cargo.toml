@@ -23,6 +23,9 @@ actix-cors = "0.7.1"
 mime_guess = "2.0"
 infer = "0.13"
 base64 = "0.21"
+futures-util = "0.3.31"
+parking_lot = "0.12"
+actix-web-ratelimit = "0.1.1"
 
 [dependencies.uuid]
 version = "1.9.1"

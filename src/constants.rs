@@ -1,6 +1,21 @@
 pub const DOMAIN: &str = "127.0.0.1:3501";
 pub const FRONTEND_DOMAIN: &str = "http://localhost:3001";
 //pub const TAURI_DOMAIN
+/// Paths that do NOT require JWT (allow through without Authorization).
+pub const NOT_PROTECTED_PATHS: [&str; 8] = [
+    "/auth/login/username",
+    "/auth/login/email",
+    "/auth/register",
+    "/auth/validate/session",
+    "/auth/resend/verification_email",
+    "/auth/reset/password",
+    "/auth/validate/account",
+    "/workspace/invitation/accept",
+];
+
+/// Path prefixes that REQUIRE JWT. Only these are checked; all others are allowed.
+/// Use this so we "allow by default" and only protect specific prefixes.
+pub const PROTECTED_PATH_PREFIXES: [&str; 4] = ["/user", "/workspace", "/users", "/problems"];
 pub const APPLICATION_JSON: &str = "application/json";
 pub const CONNECTION_POOL_ERROR: &str = "couldn't get DB connection from pool";
 pub const CONFIRMATION_TOKEN_EXIPIRATION_TIME: i64 = 900; // time in seconds

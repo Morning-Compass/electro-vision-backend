@@ -22,7 +22,7 @@ fn verify_email(users_email: String, pool: DPool) -> Result<bool, DieselError> {
 }
 
 fn verify_date(iat: usize, exp: usize) -> bool {
-    if exp - iat != JWT_EXPIRATION_TIME as usize {
+    if exp - iat > JWT_EXPIRATION_TIME as usize {
         return false;
     }
     if Utc::now().timestamp() as usize > exp {

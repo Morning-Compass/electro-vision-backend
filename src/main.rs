@@ -2,6 +2,7 @@ mod auth;
 mod buisness_logic;
 mod constants;
 mod emails;
+mod ev_middleware;
 mod models;
 mod models_insertable;
 mod multimedia_handler;
@@ -14,6 +15,9 @@ use crate::constants::CONNECTION_POOL_ERROR;
 use actix_web::dev::HttpServiceFactory;
 use actix_web::web::Data;
 use actix_web::{middleware, App, HttpServer};
+use actix_web_ratelimit::config::RateLimitConfig;
+use actix_web_ratelimit::store::MemoryStore;
+use actix_web_ratelimit::RateLimit;
 use chrono::Utc;
 use constants::DOMAIN;
 use diesel::{
@@ -24,6 +28,7 @@ use dotenv::dotenv;
 use std::env;
 use std::fs::File;
 use std::io::Read;
+use std::sync::Arc;
 
 type DBPool = Pool<ConnectionManager<PgConnection>>;
 pub type DBPConn = PooledConnection<ConnectionManager<PgConnection>>;
@@ -41,12 +46,6 @@ async fn main() -> std::io::Result<()> {
 
     println!("{}", Utc::now().naive_utc());
 
-    let mut file = File::open("api-response.json")?;
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)?;
-
-    let response_keys = response::JsonResponse::read(&contents);
-
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     let manager = ConnectionManager::<PgConnection>::new(database_url);
     let pool = r2d2::Pool::builder()
@@ -59,6 +58,7 @@ async fn main() -> std::io::Result<()> {
         let cors = actix_cors::Cors::default()
             .allowed_origin("http://localhost:3000")
             .allowed_origin("http://localhost:3001")
+            .allowed_origin("http://localhost:3002")
             .allowed_methods(vec!["GET", "POST", "PUT", "DELETE", "OPTIONS"])
             .allowed_headers(vec![
                 actix_web::http::header::AUTHORIZATION,
@@ -66,13 +66,19 @@ async fn main() -> std::io::Result<()> {
                 actix_web::http::header::CONTENT_TYPE,
             ])
             .supports_credentials()
-            .max_age(3600);
+            .max_age(3601);
+
+        let config = RateLimitConfig::default().max_requests(4).window_secs(10);
+        let store = Arc::new(MemoryStore::new());
 
         App::new()
             .app_data(actix_web::web::Data::new(pool.clone()))
-            .app_data(actix_web::web::Data::new(response_keys.clone()))
-            .wrap(middleware::Logger::default())
+            .wrap(RateLimit::new(config.clone(), store.clone()))
+            .wrap(ev_middleware::jwt_path_protection::JWTPathProtection::new(
+                actix_web::web::Data::new(pool.clone()),
+            ))
             .wrap(cors)
+            .wrap(middleware::Logger::default())
             .service(user::list)
             .service(auth::register::register)
             .service(auth::login::login_email)
